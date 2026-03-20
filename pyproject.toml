@@ -1,0 +1,49 @@
+[project]
+name = "ddlglot"
+version = "0.1.0"
+description = "Fluent DDL builder using SQLGlot AST"
+readme = "README.md"
+authors = [
+    { name = "alexsyntonize", email = "249129647+alexsyntonize@users.noreply.github.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "sqlglot>=25.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.4.0",
+    "mypy>=1.8",
+]
+docs = [
+    "sphinx>=8.0",
+    "sphinx-book-theme>=0.4",
+]
+
+[project.scripts]
+ddlglot = "ddlglot:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_ignores = true

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://github.com/googleapis/release-please/raw/main/schemas/config.json",
+  "packages": {
+    ".": {
+      "package-name": "ddlglot",
+      "release-type": "python"
+    }
+  }
+}
+
