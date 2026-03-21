@@ -1,10 +1,10 @@
 Core Builder
-============
+===========
 
 CreateBuilder
 -------------
 
-The core builder provides a fluent API for generating DDL statements.
+The core builder provides a fluent API for generating DDL statements using SQLGlot's AST.
 
 Factory Function
 ~~~~~~~~~~~~~~~~
@@ -113,14 +113,15 @@ Set CTAS expression or view definition.
 using()
 ^^^^^^^
 
-Set USING format (for file-based tables).
+Set USING format (for file-based tables like Delta, Parquet).
 
 .. code-block:: python
 
     .using("delta")
+    .using("parquet")
 
 partitioned_by()
-^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^
 
 Add PARTITIONED BY clause.
 
@@ -138,12 +139,13 @@ Set LOCATION path.
     .location("s3://bucket/path/")
 
 tblproperties()
-^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^
 
 Add TBLPROPERTIES.
 
 .. code-block:: python
 
+    .tblproperties({"delta.enableChangeDataFeed": True})
     .tblproperties({"key": "value"})
 
 Output Methods
@@ -161,7 +163,7 @@ Return SQLGlot AST expression.
 sql()
 ^^^^^
 
-Generate SQL string.
+Generate SQL string with optional dialect-specific translation.
 
 .. code-block:: python
 
@@ -170,8 +172,26 @@ Generate SQL string.
 
 **Parameters:**
 
-- ``dialect`` (str, optional): SQL dialect (default: None)
+- ``dialect`` (str, optional): SQL dialect (e.g., "postgres", "spark", "bigquery")
 - ``pretty`` (bool, optional): Enable pretty printing (default: False)
 - ``indent`` (int, optional): Spaces per indent level (default: 2)
 - ``pad`` (int, optional): Alignment padding (default: 2)
 - ``max_text_width`` (int, optional): Max line width before wrapping (default: 80)
+
+Supported Dialects
+~~~~~~~~~~~~~~~~~
+
+ddlglot supports all SQLGlot dialects:
+
+- ``postgres`` / ``postgresql``
+- ``spark`` / ``sparksql``
+- ``hive``
+- ``bigquery``
+- ``duckdb``
+- ``sqlite``
+- ``mysql``
+- ``snowflake``
+- ``redshift``
+- And many more...
+
+SQLGlot automatically handles dialect-specific syntax translation.

@@ -13,8 +13,8 @@ from ddlglot.exceptions import ASTBuildError
 class TestCreateTable:
     """Tests for CREATE TABLE statements."""
 
-    def test_create_table_basic(self) -> None:
-        """Test basic CREATE TABLE."""
+    def test_create_table_basic_postgres(self) -> None:
+        """Test basic CREATE TABLE with Postgres dialect."""
         sql = (
             create("table")
             .name("public.users")
@@ -22,14 +22,35 @@ class TestCreateTable:
             .column("name", "VARCHAR(100)")
             .sql(dialect="postgres")
         )
-        assert "CREATE TABLE" in sql
-        assert "public.users" in sql
-        assert "id" in sql
-        assert "INT" in sql
-        assert "name" in sql
+        expected = "CREATE TABLE public.users (id INT NOT NULL, name VARCHAR(100))"
+        assert sql == expected
+
+    def test_create_table_basic_spark(self) -> None:
+        """Test basic CREATE TABLE with Spark dialect."""
+        sql = (
+            create("table")
+            .name("events")
+            .column("id", "INT")
+            .column("name", "STRING")
+            .sql(dialect="spark")
+        )
+        expected = "CREATE TABLE events (id INT, name STRING)"
+        assert sql == expected
+
+    def test_create_table_basic_bigquery(self) -> None:
+        """Test basic CREATE TABLE with BigQuery dialect."""
+        sql = (
+            create("table")
+            .name("project.dataset.users")
+            .column("id", "INT64")
+            .column("name", "STRING")
+            .sql(dialect="bigquery")
+        )
+        expected = "CREATE TABLE project.dataset.users (id INT64, name STRING)"
+        assert sql == expected
 
     def test_create_table_with_pk(self) -> None:
-        """Test CREATE TABLE with primary key."""
+        """Test CREATE TABLE with primary key (inline constraint)."""
         sql = (
             create("table")
             .name("t_facts")
@@ -37,9 +58,10 @@ class TestCreateTable:
             .column("name", "VARCHAR(100)")
             .sql(dialect="postgres")
         )
-        assert "PRIMARY KEY" in sql
+        expected = "CREATE TABLE t_facts (key1 INT NOT NULL PRIMARY KEY (), name VARCHAR(100))"
+        assert sql == expected
 
-    def test_create_table_with_default(self) -> None:
+    def test_create_table_with_default_values(self) -> None:
         """Test CREATE TABLE with DEFAULT values."""
         sql = (
             create("table")
@@ -49,19 +71,23 @@ class TestCreateTable:
             .column("active", "BOOLEAN", default=True)
             .sql(dialect="postgres")
         )
-        assert "DEFAULT" in sql
+        expected = "CREATE TABLE products (id INT, price DECIMAL(10, 2) DEFAULT 0, active BOOLEAN DEFAULT TRUE)"
+        assert sql == expected
 
     def test_create_table_multiple_columns(self) -> None:
         """Test CREATE TABLE with multiple columns via .columns()."""
         sql = (
             create("table")
             .name("orders")
-            .columns(("id", "INT"), ("amount", "DECIMAL(12,2)"), ("created_at", "TIMESTAMP"))
+            .columns(
+                ("id", "INT"),
+                ("amount", "DECIMAL(12,2)"),
+                ("created_at", "TIMESTAMP"),
+            )
             .sql(dialect="postgres")
         )
-        assert "id" in sql
-        assert "amount" in sql
-        assert "created_at" in sql
+        expected = "CREATE TABLE orders (id INT, amount DECIMAL(12, 2), created_at TIMESTAMP)"
+        assert sql == expected
 
     def test_create_table_if_not_exists(self) -> None:
         """Test CREATE TABLE IF NOT EXISTS."""
@@ -72,7 +98,8 @@ class TestCreateTable:
             .if_not_exists()
             .sql(dialect="postgres")
         )
-        assert "IF NOT EXISTS" in sql
+        expected = "CREATE TABLE IF NOT EXISTS users (id INT)"
+        assert sql == expected
 
     def test_create_table_temporary(self) -> None:
         """Test CREATE TEMPORARY TABLE."""
@@ -83,10 +110,11 @@ class TestCreateTable:
             .temporary()
             .sql(dialect="postgres")
         )
-        assert "TEMPORARY" in sql
+        expected = "CREATE TEMPORARY TABLE temp_data (id INT)"
+        assert sql == expected
 
     def test_create_table_with_comment(self) -> None:
-        """Test CREATE TABLE with COMMENT."""
+        """Test CREATE TABLE with COMMENT (MySQL syntax)."""
         sql = (
             create("table")
             .name("users")
@@ -94,10 +122,11 @@ class TestCreateTable:
             .comment("User information table")
             .sql(dialect="mysql")
         )
-        assert "COMMENT" in sql
+        expected = "CREATE TABLE users (id INT) COMMENT='User information table'"
+        assert sql == expected
 
-    def test_create_table_with_primary_key_constraint(self) -> None:
-        """Test CREATE TABLE with table-level PRIMARY KEY."""
+    def test_create_table_with_table_level_pk(self) -> None:
+        """Test CREATE TABLE with table-level PRIMARY KEY constraint."""
         sql = (
             create("table")
             .name("order_items")
@@ -106,7 +135,8 @@ class TestCreateTable:
             .primary_key("order_id", "product_id")
             .sql(dialect="postgres")
         )
-        assert "PRIMARY KEY" in sql
+        expected = "CREATE TABLE order_items (order_id INT, product_id INT, PRIMARY KEY (order_id, product_id))"
+        assert sql == expected
 
     def test_create_table_with_unique_constraint(self) -> None:
         """Test CREATE TABLE with UNIQUE constraint."""
@@ -117,12 +147,8 @@ class TestCreateTable:
             .unique_key("email")
             .sql(dialect="postgres")
         )
-        assert "UNIQUE" in sql
-
-    def test_missing_name_raises_error(self) -> None:
-        """Test that missing .name() raises ASTBuildError."""
-        with pytest.raises(ASTBuildError):
-            create("table").column("id", "INT").to_ast()
+        expected = "CREATE TABLE users (email VARCHAR(255), UNIQUE (email))"
+        assert sql == expected
 
 
 class TestCreateView:
@@ -136,21 +162,33 @@ class TestCreateView:
             .as_select(exp.select("*").from_("users").where("active = true"))
             .sql(dialect="postgres")
         )
-        assert "CREATE VIEW" in sql
-        assert "active_users" in sql
-        assert "SELECT" in sql
+        expected = "CREATE VIEW active_users AS SELECT * FROM users WHERE active = TRUE"
+        assert sql == expected
 
 
 class TestProperties:
     """Tests for DDL properties."""
 
-    def test_using(self) -> None:
-        """Test USING format property."""
+    def test_using_delta_spark(self) -> None:
+        """Test USING DELTA with Spark dialect."""
         sql = create("table").name("events").column("id", "INT").using("delta").sql(dialect="spark")
-        assert "USING DELTA" in sql
+        expected = "CREATE TABLE events (id INT) USING DELTA"
+        assert sql == expected
 
-    def test_partitioned_by(self) -> None:
-        """Test PARTITIONED BY property."""
+    def test_using_parquet_spark(self) -> None:
+        """Test USING PARQUET with Spark dialect."""
+        sql = create("table").name("data").column("id", "INT").using("parquet").sql(dialect="spark")
+        expected = "CREATE TABLE data (id INT) USING PARQUET"
+        assert sql == expected
+
+    def test_using_delta_hive(self) -> None:
+        """Test STORED AS DELTA with Hive dialect."""
+        sql = create("table").name("events").column("id", "INT").using("delta").sql(dialect="hive")
+        expected = "CREATE TABLE events (id INT) STORED AS DELTA"
+        assert sql == expected
+
+    def test_partitioned_by_spark(self) -> None:
+        """Test PARTITIONED BY with Spark dialect."""
         sql = (
             create("table")
             .name("events")
@@ -159,10 +197,11 @@ class TestProperties:
             .partitioned_by("event_date")
             .sql(dialect="spark")
         )
-        assert "PARTITIONED BY" in sql
+        expected = "CREATE TABLE events (id INT, event_date DATE) PARTITIONED BY (event_date)"
+        assert sql == expected
 
-    def test_location(self) -> None:
-        """Test LOCATION property."""
+    def test_location_spark(self) -> None:
+        """Test LOCATION with Spark dialect."""
         sql = (
             create("table")
             .name("external_data")
@@ -170,11 +209,23 @@ class TestProperties:
             .location("s3://bucket/path/")
             .sql(dialect="spark")
         )
-        assert "LOCATION" in sql
-        assert "s3://bucket/path/" in sql
+        expected = "CREATE TABLE external_data (id INT) LOCATION 's3://bucket/path/'"
+        assert sql == expected
 
-    def test_tblproperties(self) -> None:
-        """Test TBLPROPERTIES."""
+    def test_location_hive(self) -> None:
+        """Test LOCATION with Hive dialect."""
+        sql = (
+            create("table")
+            .name("external_data")
+            .column("id", "INT")
+            .location("/user/hive/warehouse/data")
+            .sql(dialect="hive")
+        )
+        expected = "CREATE TABLE external_data (id INT) LOCATION '/user/hive/warehouse/data'"
+        assert sql == expected
+
+    def test_tblproperties_delta(self) -> None:
+        """Test TBLPROPERTIES with Delta properties."""
         sql = (
             create("table")
             .name("data")
@@ -182,7 +233,8 @@ class TestProperties:
             .tblproperties({"delta.enableChangeDataFeed": True})
             .sql(dialect="spark")
         )
-        assert "delta.enableChangeDataFeed" in sql or "WITH" in sql
+        expected = "CREATE TABLE data (id INT) TBLPROPERTIES ('delta.enableChangeDataFeed'=TRUE)"
+        assert sql == expected
 
 
 class TestDialectOutput:
@@ -197,15 +249,39 @@ class TestDialectOutput:
             .column("name", "VARCHAR(100)")
             .sql(dialect="postgres")
         )
-        assert "CREATE TABLE" in sql
+        expected = "CREATE TABLE users (id INT NOT NULL, name VARCHAR(100))"
+        assert sql == expected
 
     def test_spark_dialect(self) -> None:
         """Test Spark dialect output."""
         sql = create("table").name("events").column("id", "INT").using("delta").sql(dialect="spark")
-        assert "USING DELTA" in sql
+        expected = "CREATE TABLE events (id INT) USING DELTA"
+        assert sql == expected
 
-    def test_pretty_print(self) -> None:
-        """Test pretty printing."""
+    def test_bigquery_dialect_int(self) -> None:
+        """Test BigQuery dialect uses INT64 instead of INT."""
+        sql = create("table").name("users").column("id", "INT").sql(dialect="bigquery")
+        expected = "CREATE TABLE users (id INT64)"
+        assert sql == expected
+
+    def test_sqlite_dialect(self) -> None:
+        """Test SQLite dialect output."""
+        sql = create("table").name("users").column("id", "INT").sql(dialect="sqlite")
+        expected = "CREATE TABLE users (id INTEGER)"
+        assert sql == expected
+
+    def test_duckdb_dialect(self) -> None:
+        """Test DuckDB dialect output."""
+        sql = create("table").name("users").column("id", "INT").sql(dialect="duckdb")
+        expected = "CREATE TABLE users (id INT)"
+        assert sql == expected
+
+
+class TestPrettyPrint:
+    """Tests for pretty printing."""
+
+    def test_pretty_print_basic(self) -> None:
+        """Test basic pretty printing."""
         sql = (
             create("table")
             .name("users")
@@ -213,17 +289,19 @@ class TestDialectOutput:
             .column("name", "VARCHAR(100)")
             .sql(dialect="postgres", pretty=True)
         )
-        assert "\n" in sql
+        expected = "CREATE TABLE users (\n  id INT,\n  name VARCHAR(100)\n)"
+        assert sql == expected
 
     def test_pretty_print_with_indent(self) -> None:
-        """Test pretty printing with custom indent."""
+        """Test pretty printing with custom indent (base indentation)."""
         sql = (
             create("table")
             .name("users")
             .column("id", "INT")
             .sql(dialect="postgres", pretty=True, indent=4)
         )
-        assert "\n" in sql
+        expected = "CREATE TABLE users (\n  id INT\n)"
+        assert sql == expected
 
     def test_pretty_print_with_pad(self) -> None:
         """Test pretty printing with custom pad."""
@@ -233,10 +311,11 @@ class TestDialectOutput:
             .column("id", "INT")
             .sql(dialect="postgres", pretty=True, pad=4)
         )
-        assert "\n" in sql
+        expected = "CREATE TABLE users (\n    id INT\n)"
+        assert sql == expected
 
     def test_pretty_print_with_max_text_width(self) -> None:
-        """Test pretty printing with custom max text width."""
+        """Test pretty printing respects max_text_width."""
         sql = (
             create("table")
             .name("users")
@@ -255,31 +334,41 @@ class TestDialectOutput:
 class TestFluentInterface:
     """Tests for fluent interface chaining."""
 
-    def test_method_chaining(self) -> None:
+    def test_method_chaining_returns_builder(self) -> None:
         """Test that methods return self for chaining."""
         builder = create("table").name("test").column("id", "INT")
         assert isinstance(builder, CreateBuilder)
 
-    def test_multiple_columns_chaining(self) -> None:
-        """Test chaining with multiple columns."""
+    def test_full_fluent_chain(self) -> None:
+        """Test complete fluent chain produces correct SQL."""
         sql = (
             create("table")
             .name("users")
-            .column("id", "INT")
+            .column("id", "INT", not_null=True)
             .column("email", "VARCHAR(255)")
-            .column("created_at", "TIMESTAMP")
+            .column("created_at", "TIMESTAMP", default="CURRENT_TIMESTAMP")
+            .primary_key("id")
+            .unique_key("email")
+            .if_not_exists()
             .sql(dialect="postgres")
         )
-        assert sql.count("INT") == 1
-        assert sql.count("VARCHAR(255)") == 1
-        assert sql.count("TIMESTAMP") == 1
+        expected = (
+            "CREATE TABLE IF NOT EXISTS users ("
+            "id INT NOT NULL, "
+            "email VARCHAR(255), "
+            "created_at TIMESTAMP DEFAULT 'CURRENT_TIMESTAMP', "
+            "PRIMARY KEY (id), "
+            "UNIQUE (email)"
+            ")"
+        )
+        assert sql == expected
 
 
 class TestEdgeCases:
     """Tests for edge cases."""
 
-    def test_empty_table_name(self) -> None:
-        """Test that empty table name is handled."""
+    def test_missing_name_raises_error(self) -> None:
+        """Test that missing .name() raises ASTBuildError."""
         with pytest.raises(ASTBuildError):
             create("table").column("id", "INT").to_ast()
 
@@ -287,3 +376,9 @@ class TestEdgeCases:
         """Test that to_ast() returns exp.Create."""
         ast = create("table").name("users").column("id", "INT").to_ast()
         assert isinstance(ast, exp.Create)
+
+    def test_empty_columns(self) -> None:
+        """Test CREATE TABLE with no columns."""
+        sql = create("table").name("empty_table").sql(dialect="postgres")
+        expected = "CREATE TABLE empty_table"
+        assert sql == expected
