@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlglot import expressions as exp
 
@@ -16,26 +16,26 @@ class HiveBuilder:
 
     def __init__(self, kind: str = "TABLE") -> None:
         self._core = create(kind)
-        self._row_format: Optional[exp.Expression] = None
-        self._stored_as: Optional[str] = None
-        self._stored_as_input_format: Optional[tuple[str, str]] = None
+        self._row_format: exp.Expression | None = None
+        self._stored_as: str | None = None
+        self._stored_as_input_format: tuple[str, str] | None = None
 
-    def name(self, table: str) -> "HiveBuilder":
+    def name(self, table: str) -> HiveBuilder:
         """Set table name."""
         self._core.name(table)
         return self
 
-    def if_not_exists(self, flag: bool = True) -> "HiveBuilder":
+    def if_not_exists(self, flag: bool = True) -> HiveBuilder:
         """Add IF NOT EXISTS clause."""
         self._core.if_not_exists(flag)
         return self
 
-    def temporary(self, flag: bool = True) -> "HiveBuilder":
+    def temporary(self, flag: bool = True) -> HiveBuilder:
         """Mark as TEMPORARY table."""
         self._core.temporary(flag)
         return self
 
-    def comment(self, text: str) -> "HiveBuilder":
+    def comment(self, text: str) -> HiveBuilder:
         """Add table comment."""
         self._core.comment(text)
         return self
@@ -48,48 +48,48 @@ class HiveBuilder:
         not_null: bool = False,
         pk: bool = False,
         unique: bool = False,
-        default: Optional[Any] = None,
-    ) -> "HiveBuilder":
+        default: Any | None = None,
+    ) -> HiveBuilder:
         """Add a column definition."""
         self._core.column(name, dtype, not_null=not_null, pk=pk, unique=unique, default=default)
         return self
 
-    def columns(self, *pairs) -> "HiveBuilder":
+    def columns(self, *pairs) -> HiveBuilder:
         """Add multiple columns."""
         self._core.columns(*pairs)
         return self
 
-    def primary_key(self, *cols: str) -> "HiveBuilder":
+    def primary_key(self, *cols: str) -> HiveBuilder:
         """Add PRIMARY KEY constraint."""
         self._core.primary_key(*cols)
         return self
 
-    def unique_key(self, *cols: str) -> "HiveBuilder":
+    def unique_key(self, *cols: str) -> HiveBuilder:
         """Add UNIQUE constraint."""
         self._core.unique_key(*cols)
         return self
 
-    def partitioned_by(self, *cols) -> "HiveBuilder":
+    def partitioned_by(self, *cols) -> HiveBuilder:
         """Add PARTITIONED BY clause."""
         self._core.partitioned_by(*cols)
         return self
 
-    def location(self, path: str) -> "HiveBuilder":
+    def location(self, path: str) -> HiveBuilder:
         """Set LOCATION path."""
         self._core.location(path)
         return self
 
-    def tblproperties(self, props: Dict[str, Any]) -> "HiveBuilder":
+    def tblproperties(self, props: dict[str, Any]) -> HiveBuilder:
         """Add TBLPROPERTIES."""
         self._core.tblproperties(props)
         return self
 
-    def as_select(self, select_expr: exp.Expression) -> "HiveBuilder":
+    def as_select(self, select_expr: exp.Expression) -> HiveBuilder:
         """Set CTAS expression."""
         self._core.as_select(select_expr)
         return self
 
-    def row_format(self, format_type: str, serde: Optional[str] = None) -> "HiveBuilder":
+    def row_format(self, format_type: str, serde: str | None = None) -> HiveBuilder:
         """Set ROW FORMAT (DELIMITED, SERDE)."""
         if serde:
             self._row_format = exp.RowFormatSerdeProperty(this=exp.Literal.string(serde))
@@ -97,19 +97,19 @@ class HiveBuilder:
             self._row_format = exp.RowFormatDelimitedProperty()
         return self
 
-    def stored_as(self, format_type: str) -> "HiveBuilder":
+    def stored_as(self, format_type: str) -> HiveBuilder:
         """Set STORED AS format (e.g., PARQUET, ORC, AVRO)."""
         self._stored_as = format_type.upper()
         return self
 
-    def stored_as_input_output(self, input_format: str, output_format: str) -> "HiveBuilder":
+    def stored_as_input_output(self, input_format: str, output_format: str) -> HiveBuilder:
         """Set STORED AS INPUTFORMAT OUTPUTFORMAT."""
         self._stored_as_input_format = (input_format, output_format)
         return self
 
-    def _build_properties(self) -> Optional[exp.Properties]:
+    def _build_properties(self) -> exp.Properties | None:
         """Build Hive-specific properties."""
-        exprs: List[exp.Expression] = []
+        exprs: list[exp.Expression] = []
 
         if self._core._partition_cols:
             exprs.append(

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict
+from collections.abc import Callable
+from typing import Any
 
 VariantFactory = Callable[..., Any]
 
 
-_REGISTRY: Dict[str, type] = {}
+_REGISTRY: dict[str, type] = {}
 
 
 def register_variant(name: str) -> Callable[[type], type]:
@@ -89,6 +90,6 @@ def clear_registry() -> None:
     _REGISTRY.clear()
 
 
-def _get_registry() -> Dict[str, type]:
+def _get_registry() -> dict[str, type]:
     """Get the internal registry dict. For testing purposes only."""
     return _REGISTRY

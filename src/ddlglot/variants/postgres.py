@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from sqlglot import expressions as exp
 
@@ -17,22 +17,22 @@ class PostgresBuilder:
     def __init__(self, kind: str = "TABLE") -> None:
         self._core = create(kind)
 
-    def name(self, table: str) -> "PostgresBuilder":
+    def name(self, table: str) -> PostgresBuilder:
         """Set table name."""
         self._core.name(table)
         return self
 
-    def if_not_exists(self, flag: bool = True) -> "PostgresBuilder":
+    def if_not_exists(self, flag: bool = True) -> PostgresBuilder:
         """Add IF NOT EXISTS clause."""
         self._core.if_not_exists(flag)
         return self
 
-    def temporary(self, flag: bool = True) -> "PostgresBuilder":
+    def temporary(self, flag: bool = True) -> PostgresBuilder:
         """Mark as TEMPORARY table."""
         self._core.temporary(flag)
         return self
 
-    def comment(self, text: str) -> "PostgresBuilder":
+    def comment(self, text: str) -> PostgresBuilder:
         """Add table comment."""
         self._core.comment(text)
         return self
@@ -45,28 +45,28 @@ class PostgresBuilder:
         not_null: bool = False,
         pk: bool = False,
         unique: bool = False,
-        default: Optional[Any] = None,
-    ) -> "PostgresBuilder":
+        default: Any | None = None,
+    ) -> PostgresBuilder:
         """Add a column definition."""
         self._core.column(name, dtype, not_null=not_null, pk=pk, unique=unique, default=default)
         return self
 
-    def columns(self, *pairs) -> "PostgresBuilder":
+    def columns(self, *pairs) -> PostgresBuilder:
         """Add multiple columns."""
         self._core.columns(*pairs)
         return self
 
-    def primary_key(self, *cols: str) -> "PostgresBuilder":
+    def primary_key(self, *cols: str) -> PostgresBuilder:
         """Add PRIMARY KEY constraint."""
         self._core.primary_key(*cols)
         return self
 
-    def unique_key(self, *cols: str) -> "PostgresBuilder":
+    def unique_key(self, *cols: str) -> PostgresBuilder:
         """Add UNIQUE constraint."""
         self._core.unique_key(*cols)
         return self
 
-    def as_select(self, select_expr: exp.Expression) -> "PostgresBuilder":
+    def as_select(self, select_expr: exp.Expression) -> PostgresBuilder:
         """Set CTAS expression."""
         self._core.as_select(select_expr)
         return self

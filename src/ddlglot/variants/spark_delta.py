@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from sqlglot import expressions as exp
 
@@ -28,22 +28,22 @@ class SparkDeltaBuilder:
         self._core = create(kind).using(DELTA_FORMAT)
         self._validate_delta_properties: list[str] = []
 
-    def name(self, table: str) -> "SparkDeltaBuilder":
+    def name(self, table: str) -> SparkDeltaBuilder:
         """Set table name."""
         self._core.name(table)
         return self
 
-    def if_not_exists(self, flag: bool = True) -> "SparkDeltaBuilder":
+    def if_not_exists(self, flag: bool = True) -> SparkDeltaBuilder:
         """Add IF NOT EXISTS clause."""
         self._core.if_not_exists(flag)
         return self
 
-    def temporary(self, flag: bool = True) -> "SparkDeltaBuilder":
+    def temporary(self, flag: bool = True) -> SparkDeltaBuilder:
         """Mark as TEMPORARY table."""
         self._core.temporary(flag)
         return self
 
-    def comment(self, text: str) -> "SparkDeltaBuilder":
+    def comment(self, text: str) -> SparkDeltaBuilder:
         """Add table comment."""
         self._core.comment(text)
         return self
@@ -56,28 +56,28 @@ class SparkDeltaBuilder:
         not_null: bool = False,
         pk: bool = False,
         unique: bool = False,
-        default: Optional[Any] = None,
-    ) -> "SparkDeltaBuilder":
+        default: Any | None = None,
+    ) -> SparkDeltaBuilder:
         """Add a column definition."""
         self._core.column(name, dtype, not_null=not_null, pk=pk, unique=unique, default=default)
         return self
 
-    def columns(self, *pairs) -> "SparkDeltaBuilder":
+    def columns(self, *pairs) -> SparkDeltaBuilder:
         """Add multiple columns."""
         self._core.columns(*pairs)
         return self
 
-    def primary_key(self, *cols: str) -> "SparkDeltaBuilder":
+    def primary_key(self, *cols: str) -> SparkDeltaBuilder:
         """Add PRIMARY KEY constraint."""
         self._core.primary_key(*cols)
         return self
 
-    def unique_key(self, *cols: str) -> "SparkDeltaBuilder":
+    def unique_key(self, *cols: str) -> SparkDeltaBuilder:
         """Add UNIQUE constraint."""
         self._core.unique_key(*cols)
         return self
 
-    def partitioned_by(self, *cols) -> "SparkDeltaBuilder":
+    def partitioned_by(self, *cols) -> SparkDeltaBuilder:
         """Add PARTITIONED BY clause.
 
         Note: Delta Lake only supports partitioning by column names,
@@ -90,41 +90,41 @@ class SparkDeltaBuilder:
         self._core.partitioned_by(*cols)
         return self
 
-    def location(self, path: str) -> "SparkDeltaBuilder":
+    def location(self, path: str) -> SparkDeltaBuilder:
         """Set LOCATION path."""
         self._core.location(path)
         return self
 
-    def tblproperties(self, props: Dict[str, Any]) -> "SparkDeltaBuilder":
+    def tblproperties(self, props: dict[str, Any]) -> SparkDeltaBuilder:
         """Add TBLPROPERTIES."""
-        for key in props.keys():
+        for key in props:
             if not key.startswith("delta."):
                 self._validate_delta_properties.append(key)
         self._core.tblproperties(props)
         return self
 
-    def as_select(self, select_expr: exp.Expression) -> "SparkDeltaBuilder":
+    def as_select(self, select_expr: exp.Expression) -> SparkDeltaBuilder:
         """Set CTAS expression."""
         self._core.as_select(select_expr)
         return self
 
-    def enable_cdf(self, flag: bool = True) -> "SparkDeltaBuilder":
+    def enable_cdf(self, flag: bool = True) -> SparkDeltaBuilder:
         """Enable Change Data Feed."""
         return self.tblproperties({"delta.enableChangeDataFeed": flag})
 
-    def append_only(self, flag: bool = True) -> "SparkDeltaBuilder":
+    def append_only(self, flag: bool = True) -> SparkDeltaBuilder:
         """Set appendOnly property."""
         return self.tblproperties({"delta.appendOnly": flag})
 
-    def log_retention(self, interval: str) -> "SparkDeltaBuilder":
+    def log_retention(self, interval: str) -> SparkDeltaBuilder:
         """Set logRetentionDuration (e.g., '30 days')."""
         return self.tblproperties({"delta.logRetentionDuration": interval})
 
-    def deleted_file_retention(self, interval: str) -> "SparkDeltaBuilder":
+    def deleted_file_retention(self, interval: str) -> SparkDeltaBuilder:
         """Set deletedFileRetentionDuration (e.g., '7 days')."""
         return self.tblproperties({"delta.deletedFileRetentionDuration": interval})
 
-    def generated_column(self, name: str, dtype: str, expression_sql: str) -> "SparkDeltaBuilder":
+    def generated_column(self, name: str, dtype: str, expression_sql: str) -> SparkDeltaBuilder:
         """Create a GENERATED ALWAYS AS column.
 
         Useful for partitioning by a derived date (Delta doesn't support

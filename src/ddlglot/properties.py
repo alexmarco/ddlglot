@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from sqlglot import expressions as exp
 
@@ -17,7 +17,7 @@ def literal(value: Any) -> exp.Expression:
 
 
 def partition_by_property(
-    cols: List[Union[str, exp.Expression]],
+    cols: list[str | exp.Expression],
 ) -> exp.PartitionedByProperty:
     """Build PARTITIONED BY property."""
     expressions = [exp.to_identifier(c) if isinstance(c, str) else c for c in cols]
@@ -39,7 +39,7 @@ def comment_property(text: str) -> exp.SchemaCommentProperty:
     return exp.SchemaCommentProperty(this=exp.Literal.string(text))
 
 
-def tblproperties_property(props: Dict[str, Any]) -> List[exp.Property]:
+def tblproperties_property(props: dict[str, Any]) -> list[exp.Property]:
     """Build TBLPROPERTIES as list of Property expressions."""
     return [
         exp.Property(
@@ -51,14 +51,14 @@ def tblproperties_property(props: Dict[str, Any]) -> List[exp.Property]:
 
 
 def build_properties(
-    partitioned_cols: Optional[List[Union[str, exp.Expression]]] = None,
-    using: Optional[str] = None,
-    location: Optional[str] = None,
-    tblprops: Optional[Dict[str, Any]] = None,
-    comment: Optional[str] = None,
-) -> Optional[exp.Properties]:
+    partitioned_cols: list[str | exp.Expression] | None = None,
+    using: str | None = None,
+    location: str | None = None,
+    tblprops: dict[str, Any] | None = None,
+    comment: str | None = None,
+) -> exp.Properties | None:
     """Build Properties expression from components."""
-    exprs: List[exp.Expression] = []
+    exprs: list[exp.Expression] = []
 
     if partitioned_cols:
         exprs.append(partition_by_property(partitioned_cols))
