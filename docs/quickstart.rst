@@ -12,13 +12,13 @@ Basic Usage
 -----------
 
 Creating Tables
-~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
 
 .. code-block:: python
 
     from ddlglot import create
 
-    # Simple table
+    # Simple table for PostgreSQL
     sql = (
         create("table")
         .name("users")
@@ -27,22 +27,11 @@ Creating Tables
         .sql(dialect="postgres")
     )
 
-Using Variants
-~~~~~~~~~~~~~~
+Output:
 
-.. code-block:: python
+.. code-block:: sql
 
-    from ddlglot import create_spark_delta
-
-    # Delta Lake table
-    sql = (
-        create_spark_delta()
-        .name("default.events")
-        .column("id", "INT")
-        .partitioned_by("event_date")
-        .enable_cdf(True)
-        .sql()
-    )
+    CREATE TABLE users (id INT, name VARCHAR(100))
 
 Column Definitions
 -----------------
@@ -60,6 +49,12 @@ Column Definitions
         .sql(dialect="postgres")
     )
 
+Output:
+
+.. code-block:: sql
+
+    CREATE TABLE orders (id INT NOT NULL, total DECIMAL(10, 2) DEFAULT 0, active BOOLEAN DEFAULT TRUE)
+
 Table Constraints
 ----------------
 
@@ -76,6 +71,12 @@ Table Constraints
         .sql(dialect="postgres")
     )
 
+Output:
+
+.. code-block:: sql
+
+    CREATE TABLE order_items (order_id INT, product_id INT, PRIMARY KEY (order_id, product_id))
+
 Views and CTAS
 --------------
 
@@ -89,20 +90,18 @@ Views and CTAS
         create("view")
         .name("active_users")
         .as_select(exp.select("*").from_("users").where("active = true"))
-        .sql(dialect="postgres")
+        .sql(dialect="postgres", pretty=True)
     )
 
-    # Create table as select
-    sql = (
-        create("table")
-        .name("user_summary")
-        .as_select(
-            exp.select("user_id", exp.Count("*").as_("count"))
-            .from_("orders")
-            .group_by("user_id")
-        )
-        .sql(dialect="postgres")
-    )
+Output:
+
+.. code-block:: sql
+
+    CREATE VIEW active_users AS
+    SELECT
+      *
+    FROM users
+    WHERE active = TRUE
 
 Dialect-Specific Features
 ------------------------
@@ -112,64 +111,126 @@ Spark+Delta
 
 .. code-block:: python
 
-    from ddlglot import create_spark_delta
+    from ddlglot import create
 
     sql = (
-        create_spark_delta()
-        .name("default.events")
+        create("table")
+        .name("events")
         .column("id", "INT")
-        .column("ts", "TIMESTAMP")
-        .generated_column("event_date", "DATE", "CAST(ts AS DATE)")
-        .enable_cdf(True)
-        .append_only(False)
-        .sql()
+        .column("event_date", "DATE")
+        .using("delta")
+        .partitioned_by("event_date")
+        .location("s3://warehouse/events/")
+        .sql(dialect="spark", pretty=True)
     )
+
+Output:
+
+.. code-block:: sql
+
+    CREATE TABLE events (
+      id INT,
+      event_date DATE
+    )
+    USING DELTA
+    PARTITIONED BY (event_date)
+    LOCATION 's3://warehouse/events/'
 
 Hive
 ~~~~
 
 .. code-block:: python
 
-    from ddlglot import create_hive
+    from ddlglot import create
 
     sql = (
-        create_hive()
-        .name("default.events")
+        create("table")
+        .name("events")
         .column("id", "INT")
         .stored_as("PARQUET")
-        .row_format("SERDE", serde="org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe")
-        .sql()
+        .row_format("DELIMITED")
+        .location("/warehouse/events/")
+        .sql(dialect="hive", pretty=True)
     )
+
+Output:
+
+.. code-block:: sql
+
+    CREATE TABLE events (
+      id INT
+    )
+    ROW FORMAT DELIMITED
+    STORED AS PARQUET
+    LOCATION '/warehouse/events/'
 
 BigQuery
 ~~~~~~~~
 
+BigQuery uses INT64 and STRING instead of INT and VARCHAR:
+
 .. code-block:: python
 
-    from ddlglot import create_bigquery
+    from ddlglot import create
 
     sql = (
-        create_bigquery()
+        create("table")
         .name("project.dataset.events")
-        .column("id", "INT64")
-        .column("event_date", "DATE")
+        .column("id", "INT")
+        .column("name", "VARCHAR(100)")  # VARCHAR is translated to STRING
         .partitioned_by("event_date")
-        .cluster_by("user_id")
-        .sql()
+        .sql(dialect="bigquery", pretty=True)
     )
 
-Validation
-----------
+Output:
 
-The library validates dialect-specific constraints:
+.. code-block:: sql
+
+    CREATE TABLE project.dataset.events (
+      id INT64,
+      name STRING
+    )
+    PARTITION BY event_date
+
+SQLite
+~~~~~~
+
+SQLite uses INTEGER instead of INT:
 
 .. code-block:: python
 
-    from ddlglot import create_duckdb
-    from ddlglot.exceptions import UnsupportedFeatureError
+    from ddlglot import create
 
-    try:
-        # This will raise an error - DuckDB doesn't support partitioning
-        create_duckdb().name("test").partitioned_by("date").sql()
-    except UnsupportedFeatureError as e:
-        print(f"Error: {e}")
+    sql = create("table").name("users").column("id", "INT").sql(dialect="sqlite")
+
+Output:
+
+.. code-block:: sql
+
+    CREATE TABLE users (id INTEGER)
+
+Pretty Printing
+--------------
+
+.. code-block:: python
+
+    from ddlglot import create
+
+    sql = (
+        create("table")
+        .name("users")
+        .column("id", "INT")
+        .column("name", "VARCHAR(100)")
+        .column("email", "VARCHAR(255)")
+        .sql(dialect="postgres", pretty=True, max_text_width=50)
+    )
+
+Output:
+
+.. code-block:: sql
+
+    CREATE TABLE users (
+      id INT,
+      name VARCHAR(100),
+      email VARCHAR(255)
+    )
