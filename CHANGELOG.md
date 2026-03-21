@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.1.0 (2026-03-21)
+
+
+### Features
+
+* initial commit with ddlglot v0.1.0 ([2d1eeff](https://github.com/alexmarco/ddlglot/commit/2d1eeffe16ffcbaf31bb1df5783ed40038a18b5b))
+
+
+### Bug Fixes
+
+* **ci:** use sha for publish checkout instead of tag ([605a168](https://github.com/alexmarco/ddlglot/commit/605a168f83ecfcaa944d9026ff58eef6f3efc3f3))
+
 ## [26.4.0](https://github.com/alexmarco/ddlglot/compare/v26.3.2...v26.4.0) (2026-03-21)
 
 
