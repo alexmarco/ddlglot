@@ -6,13 +6,9 @@ from __future__ import annotations
 class DDLGlotError(Exception):
     """Base exception for all DDLGlot errors."""
 
-    pass
-
 
 class ValidationError(DDLGlotError):
     """Base class for validation errors."""
-
-    pass
 
 
 class DialectValidationError(ValidationError):
@@ -26,13 +22,9 @@ class DialectValidationError(ValidationError):
 class SchemaValidationError(ValidationError):
     """Raised when schema definition is invalid."""
 
-    pass
-
 
 class ASTBuildError(DDLGlotError):
     """Raised when AST construction fails."""
-
-    pass
 
 
 class UnsupportedDialectError(DDLGlotError):

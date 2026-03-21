@@ -40,8 +40,64 @@ line-length = 100
 target-version = "py313"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W"]
-ignore = ["E501"]
+select = [
+    # E, F, W: Core Python errors/warnings from PEP 8 and Pyflakes
+    "E",    # pycodestyle errors (PEP 8)
+    "F",    # Pyflakes (unused imports, undefined names, etc.)
+    "W",    # pycodestyle warnings (PEP 8)
+
+    # I: Import organization (PEP 8 - import organization)
+    "I",    # isort (import sorting)
+
+    # N: Naming conventions (PEP 8)
+    "N",    # pep8-naming (class names, function names, etc.)
+
+    # UP: Python upgrade recommendations (pyupgrade)
+    "UP",   # pyupgrade - use modern Python idioms (e.g., f-strings instead of .format())
+
+    # B: Common bugs and patterns (flake8-bugbear)
+    "B",    # flake8-bugbear - catches common bugs and patterns that are likely to be errors
+
+    # C4: Comprehension improvements (flake8-comprehensions)
+    "C4",   # flake8-comprehensions - simplify list/dict/set comprehensions
+
+    # SIM: Simplify code (ruff-specific)
+    "SIM",  # simplify - simplify redundant code patterns
+
+    # RET: Return statements (ruff-specific)
+    "RET",  # return - simplify return statements
+
+    # ARG: Function arguments (ruff-specific)
+    "ARG",  # unused-function-arguments - detect unused function arguments
+
+    # PLC, PLE, PLW: Pylint conventions/errors/warnings
+    "PLC",  # pylint-conventions - naming conventions and imports
+    "PLE",  # pylint-errors - critical errors caught by pylint
+    "PLW",  # pylint-warnings - warnings caught by pylint
+
+    # FA: Future annotations (future annotations)
+    "FA",   # flake8-annotations - enforce type annotations
+
+    # ISC: Implicit string concatenation (ruff-specific)
+    "ISC",  # implicit-string-concatenation - detect joined strings
+
+    # PIE: Miscellaneous Python idioms (ruff-specific)
+    "PIE",  # flake8-pie - miscellaneous style rules
+
+    # RUF: Ruff-specific rules
+    "RUF",  # ruff-specific rules (some are auto-fixable)
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "FA100",  # unnecessary `type: ignore` comment (mypy handles this)
+    "ISC001",  # implicit string concatenation (conflicts with formatter)
+    # UP007: Union[X, Y] - using `from __future__ import annotations`, type aliases work fine with Union
+    "UP007",
+    # ARG002: Unused method arguments - intentional for API consistency across dialects
+    "ARG002",
+    # PLC0415: Import not at top level - intentional for lazy imports to avoid circular dependencies
+    "PLC0415",
+]
 
 [tool.mypy]
 python_version = "3.13"

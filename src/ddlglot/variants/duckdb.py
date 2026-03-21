@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from sqlglot import expressions as exp
 
@@ -18,22 +18,22 @@ class DuckDBBuilder:
     def __init__(self, kind: str = "TABLE") -> None:
         self._core = create(kind)
 
-    def name(self, table: str) -> "DuckDBBuilder":
+    def name(self, table: str) -> DuckDBBuilder:
         """Set table name."""
         self._core.name(table)
         return self
 
-    def if_not_exists(self, flag: bool = True) -> "DuckDBBuilder":
+    def if_not_exists(self, flag: bool = True) -> DuckDBBuilder:
         """Add IF NOT EXISTS clause."""
         self._core.if_not_exists(flag)
         return self
 
-    def temporary(self, flag: bool = True) -> "DuckDBBuilder":
+    def temporary(self, flag: bool = True) -> DuckDBBuilder:
         """Mark as TEMPORARY table."""
         self._core.temporary(flag)
         return self
 
-    def comment(self, text: str) -> "DuckDBBuilder":
+    def comment(self, text: str) -> DuckDBBuilder:
         """Add table comment."""
         self._core.comment(text)
         return self
@@ -46,28 +46,28 @@ class DuckDBBuilder:
         not_null: bool = False,
         pk: bool = False,
         unique: bool = False,
-        default: Optional[Any] = None,
-    ) -> "DuckDBBuilder":
+        default: Any | None = None,
+    ) -> DuckDBBuilder:
         """Add a column definition."""
         self._core.column(name, dtype, not_null=not_null, pk=pk, unique=unique, default=default)
         return self
 
-    def columns(self, *pairs) -> "DuckDBBuilder":
+    def columns(self, *pairs) -> DuckDBBuilder:
         """Add multiple columns."""
         self._core.columns(*pairs)
         return self
 
-    def primary_key(self, *cols: str) -> "DuckDBBuilder":
+    def primary_key(self, *cols: str) -> DuckDBBuilder:
         """Add PRIMARY KEY constraint."""
         self._core.primary_key(*cols)
         return self
 
-    def unique_key(self, *cols: str) -> "DuckDBBuilder":
+    def unique_key(self, *cols: str) -> DuckDBBuilder:
         """Add UNIQUE constraint."""
         self._core.unique_key(*cols)
         return self
 
-    def partitioned_by(self, *cols) -> "DuckDBBuilder":
+    def partitioned_by(self, *cols) -> DuckDBBuilder:
         """Add PARTITIONED BY clause.
 
         Raises:
@@ -79,7 +79,7 @@ class DuckDBBuilder:
             "DuckDB does not support table partitioning.",
         )
 
-    def location(self, path: str) -> "DuckDBBuilder":
+    def location(self, path: str) -> DuckDBBuilder:
         """Set LOCATION path.
 
         Raises:
@@ -91,7 +91,7 @@ class DuckDBBuilder:
             "DuckDB does not support external table locations.",
         )
 
-    def tblproperties(self, props: dict[str, Any]) -> "DuckDBBuilder":
+    def tblproperties(self, props: dict[str, Any]) -> DuckDBBuilder:
         """Add TBLPROPERTIES.
 
         Raises:
@@ -103,7 +103,7 @@ class DuckDBBuilder:
             "DuckDB does not support table properties.",
         )
 
-    def as_select(self, select_expr: exp.Expression) -> "DuckDBBuilder":
+    def as_select(self, select_expr: exp.Expression) -> DuckDBBuilder:
         """Set CTAS expression."""
         self._core.as_select(select_expr)
         return self

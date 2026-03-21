@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any
 
 from sqlglot import expressions as exp
 
@@ -17,25 +17,25 @@ class BigQueryBuilder:
 
     def __init__(self, kind: str = "TABLE") -> None:
         self._core = create(kind)
-        self._partition_by: Optional[str] = None
-        self._cluster_by: List[str] = []
+        self._partition_by: str | None = None
+        self._cluster_by: list[str] = []
 
-    def name(self, table: str) -> "BigQueryBuilder":
+    def name(self, table: str) -> BigQueryBuilder:
         """Set table name."""
         self._core.name(table)
         return self
 
-    def if_not_exists(self, flag: bool = True) -> "BigQueryBuilder":
+    def if_not_exists(self, flag: bool = True) -> BigQueryBuilder:
         """Add IF NOT EXISTS clause."""
         self._core.if_not_exists(flag)
         return self
 
-    def temporary(self, flag: bool = True) -> "BigQueryBuilder":
+    def temporary(self, flag: bool = True) -> BigQueryBuilder:
         """Mark as TEMPORARY table."""
         self._core.temporary(flag)
         return self
 
-    def comment(self, text: str) -> "BigQueryBuilder":
+    def comment(self, text: str) -> BigQueryBuilder:
         """Add table comment."""
         self._core.comment(text)
         return self
@@ -48,33 +48,33 @@ class BigQueryBuilder:
         not_null: bool = False,
         pk: bool = False,
         unique: bool = False,
-        default: Optional[Any] = None,
-    ) -> "BigQueryBuilder":
+        default: Any | None = None,
+    ) -> BigQueryBuilder:
         """Add a column definition."""
         self._core.column(name, dtype, not_null=not_null, pk=pk, unique=unique, default=default)
         return self
 
-    def columns(self, *pairs) -> "BigQueryBuilder":
+    def columns(self, *pairs) -> BigQueryBuilder:
         """Add multiple columns."""
         self._core.columns(*pairs)
         return self
 
-    def primary_key(self, *cols: str) -> "BigQueryBuilder":
+    def primary_key(self, *cols: str) -> BigQueryBuilder:
         """Add PRIMARY KEY constraint."""
         self._core.primary_key(*cols)
         return self
 
-    def unique_key(self, *cols: str) -> "BigQueryBuilder":
+    def unique_key(self, *cols: str) -> BigQueryBuilder:
         """Add UNIQUE constraint."""
         self._core.unique_key(*cols)
         return self
 
-    def partitioned_by(self, partition_expr: str) -> "BigQueryBuilder":
+    def partitioned_by(self, partition_expr: str) -> BigQueryBuilder:
         """Set PARTITION BY column."""
         self._partition_by = partition_expr
         return self
 
-    def cluster_by(self, *cols: str) -> "BigQueryBuilder":
+    def cluster_by(self, *cols: str) -> BigQueryBuilder:
         """Add CLUSTER BY columns.
 
         Note: BigQuery requires partitioning when using clustering.
@@ -82,7 +82,7 @@ class BigQueryBuilder:
         self._cluster_by.extend(cols)
         return self
 
-    def as_select(self, select_expr: exp.Expression) -> "BigQueryBuilder":
+    def as_select(self, select_expr: exp.Expression) -> BigQueryBuilder:
         """Set CTAS expression."""
         self._core.as_select(select_expr)
         return self
