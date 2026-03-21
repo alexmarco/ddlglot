@@ -15,6 +15,7 @@ jobs:
     outputs:
       releases_created: ${{ steps.release-please.outputs.releases_created }}
       version: ${{ steps.release-please.outputs.version }}
+      sha: ${{ steps.release-please.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -38,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: v${{ needs.release-please.outputs.version }}
+          ref: ${{ needs.release-please.outputs.sha }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
