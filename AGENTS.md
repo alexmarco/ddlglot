@@ -354,6 +354,31 @@ cd docs/_build/html && python -m http.server 8080
 
 ## 8. Git Workflow
 
+.. warning::
+
+   **NEVER commit directly to main.** All changes must go through pull requests.
+   Even as repository owner, use feature branches to maintain a clean history
+   and ensure CI validation.
+
 - Use Conventional Commits: `feat(scope): description`, `fix(scope): description`
 - Run `pytest` and `ruff check .` before committing
-- Never commit directly to `main`; use feature branches
+- Create a feature branch for each task:
+
+  .. code-block:: bash
+
+      # Create and switch to new branch
+      git checkout -b feat/docs-add-autoapi
+
+      # Work on the branch, make commits
+      git add . && git commit -m "feat(docs): add sphinx-autoapi"
+
+      # Push and create PR
+      git push -u origin feat/docs-add-autoapi
+      gh pr create --title "feat(docs): add sphinx-autoapi" --body "..."
+
+- After PR is merged, switch back to main and pull:
+
+  .. code-block:: bash
+
+      git checkout main
+      git pull
