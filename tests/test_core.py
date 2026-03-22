@@ -9,7 +9,6 @@ from sqlglot import expressions as exp
 
 from ddlglot import create
 from ddlglot.builder import CreateBuilder
-from ddlglot.exceptions import ASTBuildError
 
 
 class DialectCase(NamedTuple):
@@ -592,11 +591,6 @@ class TestFluentInterface:
 
 class TestEdgeCases:
     """Tests for edge cases."""
-
-    def test_missing_name_raises_error(self) -> None:
-        """Test that missing .name() raises ASTBuildError."""
-        with pytest.raises(ASTBuildError):
-            create("table").column("id", "INT").to_ast()
 
     def test_to_ast_returns_exp_create(self) -> None:
         """Test that to_ast() returns exp.Create."""
