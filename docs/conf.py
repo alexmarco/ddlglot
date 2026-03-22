@@ -1,7 +1,12 @@
 project = "ddlglot"
 copyright = "2026, alexmarco"
 author = "alexmarco"
-release = "0.1.0"
+
+with open("../pyproject.toml", "rb") as f:
+    import tomllib
+
+    pyproject = tomllib.load(f)
+    release = pyproject["project"]["version"]
 
 extensions = [
     "sphinx.ext.autodoc",
