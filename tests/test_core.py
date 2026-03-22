@@ -157,7 +157,10 @@ class TestCreateTable:
         ids=lambda c: c.dialect,
     )
     def test_table_if_not_exists(self, case: DialectCase) -> None:
-        """Test CREATE TABLE IF NOT EXISTS across dialects."""
+        """Test CREATE TABLE IF NOT EXISTS across dialects.
+
+        Note: Excludes Hive as it has different IF NOT EXISTS semantics.
+        """
         sql = (
             create("table")
             .name("users")
@@ -252,7 +255,11 @@ class TestCreateTable:
         ids=lambda c: c.dialect,
     )
     def test_table_with_unique_constraint(self, case: DialectCase) -> None:
-        """Test CREATE TABLE with UNIQUE constraint."""
+        """Test CREATE TABLE with UNIQUE constraint.
+
+        Note: Excludes Spark and Hive as they don't support UNIQUE column constraints.
+        Spark uses NOT NULL + deduplicate for unique enforcement.
+        """
         sql = (
             create("table")
             .name("users")
@@ -296,7 +303,11 @@ class TestProperties:
         ids=lambda c: c.dialect,
     )
     def test_using_delta(self, case: DialectCase) -> None:
-        """Test USING DELTA translates to STORED AS DELTA in Hive."""
+        """Test USING DELTA translates to STORED AS DELTA in Hive.
+
+        Note: Only Spark and Hive support USING DELTA syntax.
+        Other dialects like BigQuery use different partitioning mechanisms.
+        """
         sql = (
             create("table")
             .name("events")
@@ -321,7 +332,11 @@ class TestProperties:
         ids=lambda c: c.dialect,
     )
     def test_using_parquet(self, case: DialectCase) -> None:
-        """Test USING PARQUET translates to STORED AS PARQUET in Hive."""
+        """Test USING PARQUET translates to STORED AS PARQUET in Hive.
+
+        Note: Only Spark and Hive support USING/PARQUET syntax.
+        Other dialects like BigQuery use different file format specifications.
+        """
         sql = (
             create("table")
             .name("data")
@@ -346,7 +361,12 @@ class TestProperties:
         ids=lambda c: c.dialect,
     )
     def test_partitioned_by(self, case: DialectCase) -> None:
-        """Test PARTITIONED BY across dialects."""
+        """Test PARTITIONED BY across dialects.
+
+        Note: Only Spark and Hive support PARTITIONED BY syntax.
+        BigQuery uses PARTITION BY (different placement/syntax).
+        DuckDB and SQLite don't support partitioning at CREATE TABLE level.
+        """
         sql = (
             create("table")
             .name("events")
@@ -372,7 +392,11 @@ class TestProperties:
         ids=lambda c: c.dialect,
     )
     def test_location(self, case: DialectCase) -> None:
-        """Test LOCATION across different file-based dialects."""
+        """Test LOCATION across different file-based dialects.
+
+        Note: Only Spark and Hive support LOCATION for external tables.
+        Other dialects like BigQuery use different mechanisms for external tables.
+        """
         path = "s3://bucket/path/" if case.dialect == "spark" else "/user/hive/warehouse/data"
         sql = (
             create("table")
@@ -398,7 +422,11 @@ class TestProperties:
         ids=lambda c: c.dialect,
     )
     def test_tblproperties_delta(self, case: DialectCase) -> None:
-        """Test TBLPROPERTIES with Delta properties."""
+        """Test TBLPROPERTIES with Delta properties.
+
+        Note: TBLPROPERTIES with delta. prefix only works in Spark/Hive.
+        Other dialects don't support table-level properties in the same way.
+        """
         sql = (
             create("table")
             .name("data")
