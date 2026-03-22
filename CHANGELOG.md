@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0](https://github.com/alexmarco/ddlglot/compare/v0.1.0...v0.2.0) (2026-03-22)
+
+
+### Features
+
+* **docs:** add dialects reference page ([20ef8d3](https://github.com/alexmarco/ddlglot/commit/20ef8d370931ea3091c5f078975416fe6b7d0a7a))
+
+
+### Bug Fixes
+
+* **docs:** add sphinx-autoapi to docs dependencies ([19667f8](https://github.com/alexmarco/ddlglot/commit/19667f8ff5633447bc4c8dbe2d56975e95f848f8))
+* **docs:** add sphinx-autoapi to docs dependencies ([f248ac0](https://github.com/alexmarco/ddlglot/commit/f248ac05de80f972d7ce131f68d9ce0637f1f0c2))
+* **docs:** convert markdown alerts to RST directives in dialects.rst ([981beaa](https://github.com/alexmarco/ddlglot/commit/981beaa8e6aa160e90a51b9a7df5fb9df2dc74ee))
+* **docs:** use list-table directive for dialects.rst tables ([951cfec](https://github.com/alexmarco/ddlglot/commit/951cfecf09bd434ed979290d35d332621f222411))
+* **docs:** use RST simple table syntax in dialects.rst ([f3a8915](https://github.com/alexmarco/ddlglot/commit/f3a891587c88acb486f27125bb86d7177c76cf2d))
+
+
+### Documentation
+
+* **agents:** add documentation section with Sphinx guidelines ([12f5122](https://github.com/alexmarco/ddlglot/commit/12f512285278b3201c4b6467d3e9c6fdbaad2395))
+* **agents:** add manual release process section ([014990c](https://github.com/alexmarco/ddlglot/commit/014990c7e851f1b026470037b17fb77254af421c))
+* **agents:** add manual release process section ([92cdc93](https://github.com/alexmarco/ddlglot/commit/92cdc938dd76943ae5e4f95fa2a0fe6f195fc6d1))
+* **agents:** expand Git Workflow section with step-by-step instructions ([5ae3605](https://github.com/alexmarco/ddlglot/commit/5ae3605f51fb3615be5a893da56a29405684ada7))
+* **agents:** expand Git Workflow section with step-by-step instructions ([fed1ac7](https://github.com/alexmarco/ddlglot/commit/fed1ac7bd79488ba17282d30ef019c483528b4a3))
+* **api:** use sphinx-autoapi for automatic API reference generation ([9624dde](https://github.com/alexmarco/ddlglot/commit/9624dde5fdaae972562a4e70be6daa0a8f00f0f0))
+* **core_builder:** rewrite with method classification table and detailed flow ([9ba2c26](https://github.com/alexmarco/ddlglot/commit/9ba2c266511dac35495bca1ec9f9a7f2e5f2ccdc))
+* update AGENTS.md to reflect current project state ([ddd9d64](https://github.com/alexmarco/ddlglot/commit/ddd9d6417d2ee4612dc7a17813c2caf38f9ee6a0))
+
 ## 0.1.0 (2026-03-21)
 
 
