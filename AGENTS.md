@@ -382,3 +382,40 @@ cd docs/_build/html && python -m http.server 8080
 
       git checkout main
       git pull
+
+---
+
+## 9. Release Process (Manual)
+
+Release Please runs in manual mode, not on every push. This gives you full
+control over when to release.
+
+### Trigger Release
+
+```bash
+# Option 1: GitHub CLI
+gh workflow run release-please.yml
+
+# Option 2: Web UI
+# Go to: Actions → Release Please → Run workflow
+```
+
+### Release Workflow
+
+1. Run the workflow manually (see above)
+2. Release Please creates/updates a Release PR with all changes since
+   the last release
+3. Review the changelog in the Release PR
+4. Merge the Release PR to actually publish
+
+- **No release triggered**: Merging regular PRs to main
+- **Release triggered**: Merging the Release PR
+
+### Close Old Release PRs
+
+If a Release PR was created automatically before the manual workflow change,
+close it without merging:
+
+.. code-block:: bash
+
+    gh pr close 4
