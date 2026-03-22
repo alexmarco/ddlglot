@@ -43,6 +43,7 @@ Output:
    :caption: Contents:
 
    quickstart
+   dialects
    core_builder
    api_reference
 
