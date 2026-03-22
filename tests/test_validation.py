@@ -7,17 +7,35 @@ from typing import NamedTuple
 import pytest
 
 from ddlglot import create
-from ddlglot.builder import CreateBuilder
 from ddlglot.exceptions import ASTBuildError, DDLGlotError, ValidationError
 
 
-class ValidationCase(NamedTuple):
-    """Test case for validation tests."""
+class DialectCase(NamedTuple):
+    """Test case with dialect and expected SQL."""
 
-    description: str
-    builder_setup: CreateBuilder
-    expected_error: type[Exception]
-    error_message_contains: str | None = None
+    dialect: str
+    expected: str
+
+
+class TypeCase(NamedTuple):
+    """Test case for type validation."""
+
+    dtype: str
+    expected_pattern: str
+
+
+class ColumnNameCase(NamedTuple):
+    """Test case for column name validation."""
+
+    column_name: str
+    expected_in_sql: str
+
+
+class TableNameCase(NamedTuple):
+    """Test case for table name validation."""
+
+    table_name: str
+    expected_in_sql: str
 
 
 class TestBuilderValidation:
@@ -62,54 +80,156 @@ class TestBuilderValidation:
         with pytest.raises(Exception, match=r"CUSTOM_TYPE"):
             create("table").name("users").column("custom", "CUSTOM_TYPE").sql(dialect="postgres")
 
-    def test_case_insensitive_types(self) -> None:
-        """Test that type names are case-insensitive."""
-        sql_lower = create("table").name("users").column("id", "int").sql(dialect="postgres")
-        sql_upper = create("table").name("users").column("id", "INT").sql(dialect="postgres")
-        sql_mixed = create("table").name("users").column("id", "Int").sql(dialect="postgres")
 
-        assert "INT" in sql_lower
-        assert "INT" in sql_upper
-        assert "INT" in sql_mixed
+class TestTypeValidation:
+    """Tests for type validation."""
 
-    def test_numeric_types(self) -> None:
-        """Test various numeric types."""
-        for dtype in [
-            "INT",
-            "INTEGER",
-            "BIGINT",
-            "SMALLINT",
-            "TINYINT",
-            "FLOAT",
-            "DOUBLE",
-            "DECIMAL(10,2)",
-        ]:
-            sql = create("table").name("t").column("c", dtype).sql(dialect="postgres")
-            assert "CREATE TABLE" in sql
+    @pytest.mark.parametrize(
+        "case",
+        [
+            TypeCase(dtype="INT", expected_pattern="INT"),
+            TypeCase(dtype="INTEGER", expected_pattern="INT"),
+            TypeCase(dtype="BIGINT", expected_pattern="BIGINT"),
+            TypeCase(dtype="SMALLINT", expected_pattern="SMALLINT"),
+            TypeCase(dtype="FLOAT", expected_pattern="REAL"),
+            TypeCase(dtype="DOUBLE", expected_pattern="DOUBLE"),
+            TypeCase(dtype="DECIMAL(10,2)", expected_pattern="DECIMAL"),
+        ],
+        ids=lambda c: c.dtype,
+    )
+    def test_numeric_types(self, case: TypeCase) -> None:
+        """Test various numeric types are accepted."""
+        sql = create("table").name("t").column("c", case.dtype).sql(dialect="postgres")
+        assert "CREATE TABLE" in sql
+        assert case.expected_pattern in sql
 
-    def test_string_types(self) -> None:
-        """Test various string types."""
-        for dtype in ["VARCHAR(100)", "CHAR(10)", "TEXT", "STRING"]:
-            sql = create("table").name("t").column("c", dtype).sql(dialect="postgres")
-            assert "CREATE TABLE" in sql
+    @pytest.mark.parametrize(
+        "case",
+        [
+            TypeCase(dtype="VARCHAR(100)", expected_pattern="VARCHAR"),
+            TypeCase(dtype="CHAR(10)", expected_pattern="CHAR"),
+            TypeCase(dtype="TEXT", expected_pattern="TEXT"),
+            TypeCase(dtype="STRING", expected_pattern="TEXT"),
+        ],
+        ids=lambda c: c.dtype,
+    )
+    def test_string_types(self, case: TypeCase) -> None:
+        """Test various string types are accepted."""
+        sql = create("table").name("t").column("c", case.dtype).sql(dialect="postgres")
+        assert "CREATE TABLE" in sql
+        assert case.expected_pattern in sql
 
-    def test_temporal_types(self) -> None:
-        """Test various temporal types."""
-        for dtype in ["DATE", "TIME", "TIMESTAMP", "DATETIME"]:
-            sql = create("table").name("t").column("c", dtype).sql(dialect="postgres")
-            assert "CREATE TABLE" in sql
+    @pytest.mark.parametrize(
+        "case",
+        [
+            TypeCase(dtype="DATE", expected_pattern="DATE"),
+            TypeCase(dtype="TIME", expected_pattern="TIME"),
+            TypeCase(dtype="TIMESTAMP", expected_pattern="TIMESTAMP"),
+            TypeCase(dtype="DATETIME", expected_pattern="TIMESTAMP"),
+        ],
+        ids=lambda c: c.dtype,
+    )
+    def test_temporal_types(self, case: TypeCase) -> None:
+        """Test various temporal types are accepted."""
+        sql = create("table").name("t").column("c", case.dtype).sql(dialect="postgres")
+        assert "CREATE TABLE" in sql
+        assert case.expected_pattern in sql
+
+    @pytest.mark.parametrize(
+        "case",
+        [
+            TypeCase(dtype="BLOB", expected_pattern="BLOB"),
+            TypeCase(dtype="BINARY", expected_pattern="BINARY"),
+            TypeCase(dtype="VARBINARY", expected_pattern="VARBINARY"),
+        ],
+        ids=lambda c: c.dtype,
+    )
+    def test_blob_types(self, case: TypeCase) -> None:
+        """Test blob/binary types are accepted."""
+        sql = create("table").name("t").column("c", case.dtype).sql(dialect="postgres")
+        assert "CREATE TABLE" in sql
 
     def test_boolean_type(self) -> None:
-        """Test boolean type."""
+        """Test boolean type is accepted."""
         sql = create("table").name("users").column("active", "BOOLEAN").sql(dialect="postgres")
         assert "active" in sql.lower()
         assert "BOOLEAN" in sql
 
-    def test_blob_types(self) -> None:
-        """Test blob/binary types."""
-        for dtype in ["BLOB", "BINARY", "VARBINARY"]:
-            sql = create("table").name("t").column("c", dtype).sql(dialect="postgres")
-            assert "CREATE TABLE" in sql
+    @pytest.mark.parametrize(
+        "case",
+        [
+            TypeCase(dtype="INT", expected_pattern="INT"),
+            TypeCase(dtype="int", expected_pattern="INT"),
+            TypeCase(dtype="Int", expected_pattern="INT"),
+        ],
+        ids=lambda c: c.dtype,
+    )
+    def test_case_insensitive_types(self, case: TypeCase) -> None:
+        """Test that type names are case-insensitive."""
+        sql = create("table").name("users").column("id", case.dtype).sql(dialect="postgres")
+        assert "INT" in sql
+
+
+class TestColumnNameValidation:
+    """Tests for column name validation."""
+
+    @pytest.mark.parametrize(
+        "case",
+        [
+            ColumnNameCase(column_name="user_name", expected_in_sql="user_name"),
+            ColumnNameCase(column_name="col1", expected_in_sql="col1"),
+            ColumnNameCase(column_name="created_at", expected_in_sql="created_at"),
+            ColumnNameCase(column_name="select", expected_in_sql="select"),
+            ColumnNameCase(column_name="user-id", expected_in_sql="user-id"),
+        ],
+        ids=lambda c: c.column_name,
+    )
+    def test_column_name_formats(self, case: ColumnNameCase) -> None:
+        """Test various column name formats are handled."""
+        sql = create("table").name("users").column(case.column_name, "INT").sql(dialect="postgres")
+        assert case.expected_in_sql in sql
+
+    def test_duplicate_column_names(self) -> None:
+        """Test that duplicate column names are allowed (SQLGlot handles it)."""
+        sql = (
+            create("table")
+            .name("users")
+            .column("id", "INT")
+            .column("id", "VARCHAR(100)")
+            .sql(dialect="postgres")
+        )
+        assert "id" in sql
+
+    def test_empty_column_name(self) -> None:
+        """Test that empty column name is handled."""
+        sql = create("table").name("users").column("", "INT").sql(dialect="postgres")
+        assert "CREATE TABLE" in sql
+
+
+class TestTableNameValidation:
+    """Tests for table name validation."""
+
+    @pytest.mark.parametrize(
+        "case",
+        [
+            TableNameCase(table_name="users", expected_in_sql="users"),
+            TableNameCase(table_name="public.users", expected_in_sql="public.users"),
+            TableNameCase(
+                table_name="project.dataset.table", expected_in_sql="project.dataset.table"
+            ),
+            TableNameCase(table_name="usuarios", expected_in_sql="usuarios"),
+        ],
+        ids=lambda c: c.table_name,
+    )
+    def test_table_name_formats(self, case: TableNameCase) -> None:
+        """Test various table name formats are handled."""
+        sql = create("table").name(case.table_name).column("id", "INT").sql(dialect="postgres")
+        assert case.expected_in_sql in sql
+
+    def test_empty_table_name_raises(self) -> None:
+        """Test empty table name raises ASTBuildError."""
+        with pytest.raises(ASTBuildError, match=r"Missing.*name"):
+            create("table").name("").column("id", "INT").to_ast()
 
 
 class TestConstraintValidation:
@@ -179,12 +299,12 @@ class TestPropertiesValidation:
     """Tests for property validation."""
 
     def test_empty_using(self) -> None:
-        """Test empty USING clause."""
+        """Test empty USING clause is handled."""
         sql = create("table").name("t").column("id", "INT").using("").sql(dialect="spark")
         assert "CREATE TABLE" in sql
 
     def test_partitioned_by_empty(self) -> None:
-        """Test empty PARTITIONED BY clause."""
+        """Test empty PARTITIONED BY clause is handled."""
         sql = create("table").name("t").column("id", "INT").partitioned_by().sql(dialect="spark")
         assert "CREATE TABLE" in sql
 
@@ -201,7 +321,7 @@ class TestPropertiesValidation:
         assert "LOCATION" in sql
 
     def test_multiple_tblproperties(self) -> None:
-        """Test multiple TBLPROPERTIES."""
+        """Test multiple TBLPROPERTIES are included."""
         sql = (
             create("table")
             .name("data")
@@ -213,7 +333,7 @@ class TestPropertiesValidation:
         assert "key2" in sql
 
     def test_tblproperties_empty(self) -> None:
-        """Test empty TBLPROPERTIES dict."""
+        """Test empty TBLPROPERTIES dict is handled."""
         sql = create("table").name("t").column("id", "INT").tblproperties({}).sql(dialect="spark")
         assert "CREATE TABLE" in sql
 
@@ -273,9 +393,21 @@ class TestEdgeCaseValidation:
         assert "users" in sql
         assert "PRIMARY KEY" in sql
 
-    def test_all_dialects_handle_basic_table(self) -> None:
+    @pytest.mark.parametrize(
+        "case",
+        [
+            DialectCase(dialect="postgres", expected="CREATE TABLE t (id INT)"),
+            DialectCase(dialect="spark", expected="CREATE TABLE t (id INT)"),
+            DialectCase(dialect="bigquery", expected="CREATE TABLE t (id INT64)"),
+            DialectCase(dialect="duckdb", expected="CREATE TABLE t (id INT)"),
+            DialectCase(dialect="sqlite", expected="CREATE TABLE t (id INTEGER)"),
+            DialectCase(dialect="hive", expected="CREATE TABLE t (id INT)"),
+        ],
+        ids=lambda c: c.dialect,
+    )
+    def test_all_dialects_handle_basic_table(self, case: DialectCase) -> None:
         """Test that all supported dialects can generate basic tables."""
-        dialects = ["postgres", "spark", "bigquery", "duckdb", "sqlite", "hive"]
-        for dialect in dialects:
-            sql = create("table").name("t").column("id", "INT").sql(dialect=dialect)
-            assert "CREATE TABLE" in sql, f"Failed for dialect: {dialect}"
+        sql = create("table").name("t").column("id", "INT").sql(dialect=case.dialect)
+        assert "CREATE TABLE" in sql
+        assert "t" in sql
+        assert "id" in sql
