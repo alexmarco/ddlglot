@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import NamedTuple
+
 import pytest
 from sqlglot import expressions as exp
 
@@ -10,11 +12,62 @@ from ddlglot.builder import CreateBuilder
 from ddlglot.exceptions import ASTBuildError
 
 
+class DialectCase(NamedTuple):
+    """Test case with dialect and expected SQL."""
+
+    dialect: str
+    expected: str
+
+
+COMMON_DIALECTS = ["postgres", "spark", "bigquery", "duckdb", "sqlite", "hive"]
+
+
 class TestCreateTable:
     """Tests for CREATE TABLE statements."""
 
-    def test_create_table_basic_postgres(self) -> None:
-        """Test basic CREATE TABLE with Postgres dialect."""
+    @pytest.mark.parametrize(
+        "case",
+        [
+            DialectCase(
+                dialect="postgres",
+                expected="CREATE TABLE users (id INT NOT NULL, name VARCHAR(100))",
+            ),
+            DialectCase(
+                dialect="spark",
+                expected="CREATE TABLE users (id INT NOT NULL, name VARCHAR(100))",
+            ),
+            DialectCase(
+                dialect="bigquery",
+                expected="CREATE TABLE users (id INT64 NOT NULL, name STRING(100))",
+            ),
+            DialectCase(
+                dialect="duckdb",
+                expected="CREATE TABLE users (id INT NOT NULL, name TEXT(100))",
+            ),
+            DialectCase(
+                dialect="sqlite",
+                expected="CREATE TABLE users (id INTEGER NOT NULL, name TEXT(100))",
+            ),
+            DialectCase(
+                dialect="hive",
+                expected="CREATE TABLE users (id INT NOT NULL, name VARCHAR(100))",
+            ),
+        ],
+        ids=lambda c: c.dialect,
+    )
+    def test_basic_table(self, case: DialectCase) -> None:
+        """Test basic CREATE TABLE across dialects."""
+        sql = (
+            create("table")
+            .name("users")
+            .column("id", "INT", not_null=True)
+            .column("name", "VARCHAR(100)")
+            .sql(dialect=case.dialect)
+        )
+        assert sql == case.expected
+
+    def test_table_with_qualified_name(self) -> None:
+        """Test CREATE TABLE with schema-qualified name."""
         sql = (
             create("table")
             .name("public.users")
@@ -25,20 +78,8 @@ class TestCreateTable:
         expected = "CREATE TABLE public.users (id INT NOT NULL, name VARCHAR(100))"
         assert sql == expected
 
-    def test_create_table_basic_spark(self) -> None:
-        """Test basic CREATE TABLE with Spark dialect."""
-        sql = (
-            create("table")
-            .name("events")
-            .column("id", "INT")
-            .column("name", "STRING")
-            .sql(dialect="spark")
-        )
-        expected = "CREATE TABLE events (id INT, name STRING)"
-        assert sql == expected
-
-    def test_create_table_basic_bigquery(self) -> None:
-        """Test basic CREATE TABLE with BigQuery dialect."""
+    def test_table_with_bq_qualified_name(self) -> None:
+        """Test CREATE TABLE with BigQuery fully-qualified name."""
         sql = (
             create("table")
             .name("project.dataset.users")
@@ -49,8 +90,8 @@ class TestCreateTable:
         expected = "CREATE TABLE project.dataset.users (id INT64, name STRING)"
         assert sql == expected
 
-    def test_create_table_with_pk(self) -> None:
-        """Test CREATE TABLE with primary key (inline constraint)."""
+    def test_table_with_pk_inline_constraint(self) -> None:
+        """Test CREATE TABLE with inline PRIMARY KEY constraint."""
         sql = (
             create("table")
             .name("t_facts")
@@ -61,7 +102,7 @@ class TestCreateTable:
         expected = "CREATE TABLE t_facts (key1 INT NOT NULL PRIMARY KEY (), name VARCHAR(100))"
         assert sql == expected
 
-    def test_create_table_with_default_values(self) -> None:
+    def test_table_with_defaults(self) -> None:
         """Test CREATE TABLE with DEFAULT values."""
         sql = (
             create("table")
@@ -74,7 +115,7 @@ class TestCreateTable:
         expected = "CREATE TABLE products (id INT, price DECIMAL(10, 2) DEFAULT 0, active BOOLEAN DEFAULT TRUE)"
         assert sql == expected
 
-    def test_create_table_multiple_columns(self) -> None:
+    def test_table_with_multiple_columns(self) -> None:
         """Test CREATE TABLE with multiple columns via .columns()."""
         sql = (
             create("table")
@@ -89,19 +130,44 @@ class TestCreateTable:
         expected = "CREATE TABLE orders (id INT, amount DECIMAL(12, 2), created_at TIMESTAMP)"
         assert sql == expected
 
-    def test_create_table_if_not_exists(self) -> None:
-        """Test CREATE TABLE IF NOT EXISTS."""
+    @pytest.mark.parametrize(
+        "case",
+        [
+            DialectCase(
+                dialect="postgres",
+                expected="CREATE TABLE IF NOT EXISTS users (id INT)",
+            ),
+            DialectCase(
+                dialect="spark",
+                expected="CREATE TABLE IF NOT EXISTS users (id INT)",
+            ),
+            DialectCase(
+                dialect="bigquery",
+                expected="CREATE TABLE IF NOT EXISTS users (id INT64)",
+            ),
+            DialectCase(
+                dialect="duckdb",
+                expected="CREATE TABLE IF NOT EXISTS users (id INT)",
+            ),
+            DialectCase(
+                dialect="sqlite",
+                expected="CREATE TABLE IF NOT EXISTS users (id INTEGER)",
+            ),
+        ],
+        ids=lambda c: c.dialect,
+    )
+    def test_table_if_not_exists(self, case: DialectCase) -> None:
+        """Test CREATE TABLE IF NOT EXISTS across dialects."""
         sql = (
             create("table")
             .name("users")
             .column("id", "INT")
             .if_not_exists()
-            .sql(dialect="postgres")
+            .sql(dialect=case.dialect)
         )
-        expected = "CREATE TABLE IF NOT EXISTS users (id INT)"
-        assert sql == expected
+        assert sql == case.expected
 
-    def test_create_table_temporary(self) -> None:
+    def test_table_temporary(self) -> None:
         """Test CREATE TEMPORARY TABLE."""
         sql = (
             create("table")
@@ -113,8 +179,8 @@ class TestCreateTable:
         expected = "CREATE TEMPORARY TABLE temp_data (id INT)"
         assert sql == expected
 
-    def test_create_table_with_comment(self) -> None:
-        """Test CREATE TABLE with COMMENT (MySQL syntax)."""
+    def test_table_with_comment(self) -> None:
+        """Test CREATE TABLE with COMMENT."""
         sql = (
             create("table")
             .name("users")
@@ -125,7 +191,33 @@ class TestCreateTable:
         expected = "CREATE TABLE users (id INT) COMMENT='User information table'"
         assert sql == expected
 
-    def test_create_table_with_table_level_pk(self) -> None:
+    @pytest.mark.parametrize(
+        "case",
+        [
+            DialectCase(
+                dialect="postgres",
+                expected="CREATE TABLE order_items (order_id INT, product_id INT, PRIMARY KEY (order_id, product_id))",
+            ),
+            DialectCase(
+                dialect="spark",
+                expected="CREATE TABLE order_items (order_id INT, product_id INT, PRIMARY KEY (order_id, product_id))",
+            ),
+            DialectCase(
+                dialect="bigquery",
+                expected="CREATE TABLE order_items (order_id INT64, product_id INT64, PRIMARY KEY (order_id, product_id))",
+            ),
+            DialectCase(
+                dialect="duckdb",
+                expected="CREATE TABLE order_items (order_id INT, product_id INT, PRIMARY KEY (order_id, product_id))",
+            ),
+            DialectCase(
+                dialect="sqlite",
+                expected="CREATE TABLE order_items (order_id INTEGER, product_id INTEGER, PRIMARY KEY (order_id, product_id))",
+            ),
+        ],
+        ids=lambda c: c.dialect,
+    )
+    def test_table_with_table_level_pk(self, case: DialectCase) -> None:
         """Test CREATE TABLE with table-level PRIMARY KEY constraint."""
         sql = (
             create("table")
@@ -133,28 +225,48 @@ class TestCreateTable:
             .column("order_id", "INT")
             .column("product_id", "INT")
             .primary_key("order_id", "product_id")
-            .sql(dialect="postgres")
+            .sql(dialect=case.dialect)
         )
-        expected = "CREATE TABLE order_items (order_id INT, product_id INT, PRIMARY KEY (order_id, product_id))"
-        assert sql == expected
+        assert sql == case.expected
 
-    def test_create_table_with_unique_constraint(self) -> None:
+    @pytest.mark.parametrize(
+        "case",
+        [
+            DialectCase(
+                dialect="postgres",
+                expected="CREATE TABLE users (email VARCHAR(100), UNIQUE (email))",
+            ),
+            DialectCase(
+                dialect="bigquery",
+                expected="CREATE TABLE users (email STRING(100), UNIQUE (email))",
+            ),
+            DialectCase(
+                dialect="duckdb",
+                expected="CREATE TABLE users (email TEXT(100), UNIQUE (email))",
+            ),
+            DialectCase(
+                dialect="sqlite",
+                expected="CREATE TABLE users (email TEXT(100), UNIQUE (email))",
+            ),
+        ],
+        ids=lambda c: c.dialect,
+    )
+    def test_table_with_unique_constraint(self, case: DialectCase) -> None:
         """Test CREATE TABLE with UNIQUE constraint."""
         sql = (
             create("table")
             .name("users")
-            .column("email", "VARCHAR(255)")
+            .column("email", "VARCHAR(100)")
             .unique_key("email")
-            .sql(dialect="postgres")
+            .sql(dialect=case.dialect)
         )
-        expected = "CREATE TABLE users (email VARCHAR(255), UNIQUE (email))"
-        assert sql == expected
+        assert sql == case.expected
 
 
 class TestCreateView:
     """Tests for CREATE VIEW statements."""
 
-    def test_create_view_basic(self) -> None:
+    def test_create_view(self) -> None:
         """Test basic CREATE VIEW."""
         sql = (
             create("view")
@@ -169,112 +281,198 @@ class TestCreateView:
 class TestProperties:
     """Tests for DDL properties."""
 
-    def test_using_delta_spark(self) -> None:
-        """Test USING DELTA with Spark dialect."""
-        sql = create("table").name("events").column("id", "INT").using("delta").sql(dialect="spark")
-        expected = "CREATE TABLE events (id INT) USING DELTA"
-        assert sql == expected
+    @pytest.mark.parametrize(
+        "case",
+        [
+            DialectCase(
+                dialect="spark",
+                expected="CREATE TABLE events (id INT) USING DELTA",
+            ),
+            DialectCase(
+                dialect="hive",
+                expected="CREATE TABLE events (id INT) STORED AS DELTA",
+            ),
+        ],
+        ids=lambda c: c.dialect,
+    )
+    def test_using_delta(self, case: DialectCase) -> None:
+        """Test USING DELTA translates to STORED AS DELTA in Hive."""
+        sql = (
+            create("table")
+            .name("events")
+            .column("id", "INT")
+            .using("delta")
+            .sql(dialect=case.dialect)
+        )
+        assert sql == case.expected
 
-    def test_using_parquet_spark(self) -> None:
-        """Test USING PARQUET with Spark dialect."""
-        sql = create("table").name("data").column("id", "INT").using("parquet").sql(dialect="spark")
-        expected = "CREATE TABLE data (id INT) USING PARQUET"
-        assert sql == expected
+    @pytest.mark.parametrize(
+        "case",
+        [
+            DialectCase(
+                dialect="spark",
+                expected="CREATE TABLE data (id INT) USING PARQUET",
+            ),
+            DialectCase(
+                dialect="hive",
+                expected="CREATE TABLE data (id INT) STORED AS PARQUET",
+            ),
+        ],
+        ids=lambda c: c.dialect,
+    )
+    def test_using_parquet(self, case: DialectCase) -> None:
+        """Test USING PARQUET translates to STORED AS PARQUET in Hive."""
+        sql = (
+            create("table")
+            .name("data")
+            .column("id", "INT")
+            .using("parquet")
+            .sql(dialect=case.dialect)
+        )
+        assert sql == case.expected
 
-    def test_using_delta_hive(self) -> None:
-        """Test STORED AS DELTA with Hive dialect."""
-        sql = create("table").name("events").column("id", "INT").using("delta").sql(dialect="hive")
-        expected = "CREATE TABLE events (id INT) STORED AS DELTA"
-        assert sql == expected
-
-    def test_partitioned_by_spark(self) -> None:
-        """Test PARTITIONED BY with Spark dialect."""
+    @pytest.mark.parametrize(
+        "case",
+        [
+            DialectCase(
+                dialect="spark",
+                expected="CREATE TABLE events (id INT, event_date DATE) PARTITIONED BY (event_date)",
+            ),
+            DialectCase(
+                dialect="hive",
+                expected="CREATE TABLE events (id INT, event_date DATE) PARTITIONED BY (event_date)",
+            ),
+        ],
+        ids=lambda c: c.dialect,
+    )
+    def test_partitioned_by(self, case: DialectCase) -> None:
+        """Test PARTITIONED BY across dialects."""
         sql = (
             create("table")
             .name("events")
             .column("id", "INT")
             .column("event_date", "DATE")
             .partitioned_by("event_date")
-            .sql(dialect="spark")
+            .sql(dialect=case.dialect)
         )
-        expected = "CREATE TABLE events (id INT, event_date DATE) PARTITIONED BY (event_date)"
-        assert sql == expected
+        assert sql == case.expected
 
-    def test_location_spark(self) -> None:
-        """Test LOCATION with Spark dialect."""
+    @pytest.mark.parametrize(
+        "case",
+        [
+            DialectCase(
+                dialect="spark",
+                expected="CREATE TABLE external_data (id INT) LOCATION 's3://bucket/path/'",
+            ),
+            DialectCase(
+                dialect="hive",
+                expected="CREATE TABLE external_data (id INT) LOCATION '/user/hive/warehouse/data'",
+            ),
+        ],
+        ids=lambda c: c.dialect,
+    )
+    def test_location(self, case: DialectCase) -> None:
+        """Test LOCATION across different file-based dialects."""
+        path = "s3://bucket/path/" if case.dialect == "spark" else "/user/hive/warehouse/data"
         sql = (
             create("table")
             .name("external_data")
             .column("id", "INT")
-            .location("s3://bucket/path/")
-            .sql(dialect="spark")
+            .location(path)
+            .sql(dialect=case.dialect)
         )
-        expected = "CREATE TABLE external_data (id INT) LOCATION 's3://bucket/path/'"
-        assert sql == expected
+        assert sql == case.expected
 
-    def test_location_hive(self) -> None:
-        """Test LOCATION with Hive dialect."""
-        sql = (
-            create("table")
-            .name("external_data")
-            .column("id", "INT")
-            .location("/user/hive/warehouse/data")
-            .sql(dialect="hive")
-        )
-        expected = "CREATE TABLE external_data (id INT) LOCATION '/user/hive/warehouse/data'"
-        assert sql == expected
-
-    def test_tblproperties_delta(self) -> None:
+    @pytest.mark.parametrize(
+        "case",
+        [
+            DialectCase(
+                dialect="spark",
+                expected="CREATE TABLE data (id INT) TBLPROPERTIES ('delta.enableChangeDataFeed'=TRUE)",
+            ),
+            DialectCase(
+                dialect="hive",
+                expected="CREATE TABLE data (id INT) TBLPROPERTIES ('delta.enableChangeDataFeed'=TRUE)",
+            ),
+        ],
+        ids=lambda c: c.dialect,
+    )
+    def test_tblproperties_delta(self, case: DialectCase) -> None:
         """Test TBLPROPERTIES with Delta properties."""
         sql = (
             create("table")
             .name("data")
             .column("id", "INT")
             .tblproperties({"delta.enableChangeDataFeed": True})
-            .sql(dialect="spark")
+            .sql(dialect=case.dialect)
         )
-        expected = "CREATE TABLE data (id INT) TBLPROPERTIES ('delta.enableChangeDataFeed'=TRUE)"
-        assert sql == expected
+        assert sql == case.expected
 
 
-class TestDialectOutput:
-    """Tests for dialect-specific output."""
+class TestDialectTranslation:
+    """Tests for dialect-specific type translation."""
 
-    def test_postgres_dialect(self) -> None:
-        """Test Postgres dialect output."""
-        sql = (
-            create("table")
-            .name("users")
-            .column("id", "INT", not_null=True)
-            .column("name", "VARCHAR(100)")
-            .sql(dialect="postgres")
-        )
-        expected = "CREATE TABLE users (id INT NOT NULL, name VARCHAR(100))"
-        assert sql == expected
+    @pytest.mark.parametrize(
+        "case",
+        [
+            DialectCase(
+                dialect="postgres",
+                expected="CREATE TABLE users (id INT)",
+            ),
+            DialectCase(
+                dialect="spark",
+                expected="CREATE TABLE users (id INT)",
+            ),
+            DialectCase(
+                dialect="bigquery",
+                expected="CREATE TABLE users (id INT64)",
+            ),
+            DialectCase(
+                dialect="duckdb",
+                expected="CREATE TABLE users (id INT)",
+            ),
+            DialectCase(
+                dialect="sqlite",
+                expected="CREATE TABLE users (id INTEGER)",
+            ),
+        ],
+        ids=lambda c: c.dialect,
+    )
+    def test_int_translation(self, case: DialectCase) -> None:
+        """Test INT type translation across dialects."""
+        sql = create("table").name("users").column("id", "INT").sql(dialect=case.dialect)
+        assert sql == case.expected
 
-    def test_spark_dialect(self) -> None:
-        """Test Spark dialect output."""
-        sql = create("table").name("events").column("id", "INT").using("delta").sql(dialect="spark")
-        expected = "CREATE TABLE events (id INT) USING DELTA"
-        assert sql == expected
-
-    def test_bigquery_dialect_int(self) -> None:
-        """Test BigQuery dialect uses INT64 instead of INT."""
-        sql = create("table").name("users").column("id", "INT").sql(dialect="bigquery")
-        expected = "CREATE TABLE users (id INT64)"
-        assert sql == expected
-
-    def test_sqlite_dialect(self) -> None:
-        """Test SQLite dialect output."""
-        sql = create("table").name("users").column("id", "INT").sql(dialect="sqlite")
-        expected = "CREATE TABLE users (id INTEGER)"
-        assert sql == expected
-
-    def test_duckdb_dialect(self) -> None:
-        """Test DuckDB dialect output."""
-        sql = create("table").name("users").column("id", "INT").sql(dialect="duckdb")
-        expected = "CREATE TABLE users (id INT)"
-        assert sql == expected
+    @pytest.mark.parametrize(
+        "case",
+        [
+            DialectCase(
+                dialect="postgres",
+                expected="CREATE TABLE users (name VARCHAR(100))",
+            ),
+            DialectCase(
+                dialect="spark",
+                expected="CREATE TABLE users (name VARCHAR(100))",
+            ),
+            DialectCase(
+                dialect="bigquery",
+                expected="CREATE TABLE users (name STRING(100))",
+            ),
+            DialectCase(
+                dialect="duckdb",
+                expected="CREATE TABLE users (name TEXT(100))",
+            ),
+            DialectCase(
+                dialect="sqlite",
+                expected="CREATE TABLE users (name TEXT(100))",
+            ),
+        ],
+        ids=lambda c: c.dialect,
+    )
+    def test_varchar_translation(self, case: DialectCase) -> None:
+        """Test VARCHAR type translation across dialects."""
+        sql = create("table").name("users").column("name", "VARCHAR(100)").sql(dialect=case.dialect)
+        assert sql == case.expected
 
 
 class TestPrettyPrint:
@@ -293,7 +491,7 @@ class TestPrettyPrint:
         assert sql == expected
 
     def test_pretty_print_with_indent(self) -> None:
-        """Test pretty printing with custom indent (base indentation)."""
+        """Test pretty printing with custom indent (base indentation unchanged)."""
         sql = (
             create("table")
             .name("users")

@@ -188,23 +188,48 @@ def sql(
 - Follow naming: `test_<module>.py`
 - One test class per module, test functions prefixed with `test_`
 - **Always compare full SQL output**, never substring checks
+- Use parameterized tests with `DialectCase` for multi-dialect testing
 
 ```python
 # tests/test_core.py
+from typing import NamedTuple
+
+class DialectCase(NamedTuple):
+    """Test case with dialect and expected SQL."""
+    dialect: str
+    expected: str
+
 class TestCreateTable:
     """Tests for CREATE TABLE statements."""
 
-    def test_create_table_basic_postgres(self) -> None:
-        """Test basic CREATE TABLE with Postgres dialect."""
+    @pytest.mark.parametrize(
+        "case",
+        [
+            DialectCase(
+                dialect="postgres",
+                expected="CREATE TABLE users (id INT NOT NULL, name VARCHAR(100))",
+            ),
+            DialectCase(
+                dialect="bigquery",
+                expected="CREATE TABLE users (id INT64 NOT NULL, name STRING(100))",
+            ),
+            DialectCase(
+                dialect="sqlite",
+                expected="CREATE TABLE users (id INTEGER NOT NULL, name TEXT(100))",
+            ),
+        ],
+        ids=lambda c: c.dialect,
+    )
+    def test_basic_table(self, case: DialectCase) -> None:
+        """Test basic CREATE TABLE across dialects."""
         sql = (
             create("table")
-            .name("public.users")
+            .name("users")
             .column("id", "INT", not_null=True)
             .column("name", "VARCHAR(100)")
-            .sql(dialect="postgres")
+            .sql(dialect=case.dialect)
         )
-        expected = "CREATE TABLE public.users (id INT NOT NULL, name VARCHAR(100))"
-        assert sql == expected
+        assert sql == case.expected
 ```
 
 ---
