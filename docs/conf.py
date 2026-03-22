@@ -8,7 +8,12 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
+    "autoapi.extension",
 ]
+
+autoapi_dirs = ["../src"]
+autoapi_type = "python"
+autoapi_root = "api"
 
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]

@@ -45,7 +45,7 @@ Output:
    quickstart
    dialects
    core_builder
-   api_reference
+   api/index
 
 Installation
 ------------
