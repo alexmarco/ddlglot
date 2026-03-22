@@ -260,6 +260,7 @@ ddlglot/
 - **pytest**: Testing framework
 - **ruff**: Linting and formatting (with comprehensive rule sets)
 - **mypy**: Static type checking
+- **sphinx**: Documentation generation (installed as dev dependency)
 
 ---
 
@@ -297,7 +298,61 @@ ddlglot/
 
 ---
 
-## 7. Git Workflow
+## 7. Documentation
+
+### Build & Preview
+
+```bash
+# Build HTML docs locally
+uv run sphinx-build -b html docs docs/_build/html
+
+# Serve locally (optional)
+cd docs/_build/html && python -m http.server 8080
+```
+
+### Syntax Rules
+
+- **Format**: reStructuredText (``.rst``), **not** Markdown.
+- **Admonitions**: Use RST directives (``.. warning::``, ``.. note::``), not
+  Markdown-style alerts (``> [!WARNING]``).
+
+  ```rst
+  .. warning::
+     Text here.
+
+  .. note::
+     Text here.
+  ```
+
+- **Tables**: Use the ``.. list-table::`` directive. It does not require manual
+  character alignment and is the recommended approach by Sphinx.
+
+  ````rst
+  .. list-table::
+     :header-rows: 1
+     :widths: 15 15 15
+
+     * - Column 1
+       - Column 2
+       - Column 3
+     * - Data 1
+       - Data 2
+       - Data 3
+  ````
+
+  Avoid manual RST table syntax (``---`` or ``===``) because it requires
+  exact character alignment across all rows, which is error-prone and hard to
+  maintain.
+
+### Deployment
+
+- Docs are deployed automatically to GitHub Pages via
+  ``.github/workflows/docs.yml`` on push to ``main``.
+- The Sphinx ``html_theme`` is ``sphinx_book_theme``.
+
+---
+
+## 8. Git Workflow
 
 - Use Conventional Commits: `feat(scope): description`, `fix(scope): description`
 - Run `pytest` and `ruff check .` before committing
