@@ -41,10 +41,11 @@ String Types
 | TEXT                | TEXT     | TEXT    | STRING   | STRING  | VARCHAR  | TEXT   |
 +---------------------+----------+---------+----------+---------+----------+--------+
 
-> [!WARNING]
-> SQLite ignores length specifiers on VARCHAR and CHAR. ``VARCHAR(100)`` is
-> stored as ``TEXT`` — the number in parentheses has no effect. SQLite uses
-> type affinity, not strict typing.
+.. warning::
+
+   SQLite ignores length specifiers on VARCHAR and CHAR. ``VARCHAR(100)`` is
+   stored as ``TEXT`` — the number in parentheses has no effect. SQLite uses
+   type affinity, not strict typing.
 
 Temporal Types
 ~~~~~~~~~~~~~~
@@ -108,8 +109,9 @@ Dialect Feature Matrix
 - ``X*`` = SQLite supports PRIMARY KEY and UNIQUE but they are not enforced
   during inserts
 
-> [!NOTE]
-> Spark also supports Delta Lake format via ``.using("delta")``.
+.. note::
+
+   Spark also supports Delta Lake format via ``.using("delta")``.
 
 Known Limitations
 -----------------

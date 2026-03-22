@@ -57,6 +57,9 @@ mypy src
 - **Language**: English for all code, comments, and documentation
 - **Python version**: 3.13+
 - **Build system**: hatchling (via `pyproject.toml`)
+- **Documentation format**: reStructuredText (``.rst``), **not** Markdown.
+  Use RST directives for admonitions (``.. warning::``, ``.. note::``), not
+  Markdown-style alerts (``> [!WARNING]``).
 
 ### Imports
 
