@@ -1,3 +1,5 @@
+![ddlglot logo](./image/Designer (3).png)
+
 # ddlglot
 
 **Fluent DDL builder using SQLGlot's AST**
