@@ -43,6 +43,7 @@ Output:
    :caption: Contents:
 
    quickstart
+   motivation
    dialects
    core_builder
    api/index
