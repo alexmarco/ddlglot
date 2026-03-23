@@ -37,7 +37,7 @@ body, .bd-content {
 
 /* Resize logo */
 .logo__image {
-    max-height: 2.5rem !important;
+    max-height: 128px !important;
     width: auto !important;
 }
 
