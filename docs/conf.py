@@ -15,6 +15,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "autoapi.extension",
     "sphinxcontrib.kroki",
+    "sphinx_copybutton",
 ]
 
 autoapi_dirs = ["../src"]
