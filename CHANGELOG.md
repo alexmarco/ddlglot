@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0](https://github.com/alexmarco/ddlglot/compare/v0.2.0...v0.3.0) (2026-03-23)
+
+
+### Features
+
+* **builder:** add DDL inspection with .build() method and public types ([ab3848c](https://github.com/alexmarco/ddlglot/commit/ab3848c9e210afdc83070a7ce4418cffcf95d511))
+* **builder:** add DDL inspection with .build() method and public types ([a40e904](https://github.com/alexmarco/ddlglot/commit/a40e904173eb650c16e639206a9a33fd94728d4b))
+
+
+### Bug Fixes
+
+* **builder:** handle boolean defaults in type extraction ([e01ea5f](https://github.com/alexmarco/ddlglot/commit/e01ea5f191a2b9663104d4628a3827ac9fea9497))
+* **docs:** add setuptools&lt;71 dependency for sphinxcontrib-kroki ([dd2c31b](https://github.com/alexmarco/ddlglot/commit/dd2c31b3b567165ed458bb946a27ced2e3e89181))
+* **docs:** read version dynamically from pyproject.toml ([4d14979](https://github.com/alexmarco/ddlglot/commit/4d14979b242dafc8391ece4a5bb6937118e55e6b))
+* **docs:** read version dynamically from pyproject.toml ([95476a1](https://github.com/alexmarco/ddlglot/commit/95476a1ac2641a71cc650f695df9c747fd3959a1))
+
+
+### Documentation
+
+* add CI/CD architecture document and remove release schedule ([78970a0](https://github.com/alexmarco/ddlglot/commit/78970a0d000d4e014440a4a2ca028948036059f3))
+* add CI/CD architecture document and remove release schedule ([482cfca](https://github.com/alexmarco/ddlglot/commit/482cfca7958661391f969ab23ca038935a00a064))
+* add motivation page explaining origin, use cases, and comparison with ORMs ([b88a091](https://github.com/alexmarco/ddlglot/commit/b88a091940f2199c16e93ac30a428a2b61427571))
+* add motivation page explaining origin, use cases, and comparison with ORMs ([8745c1b](https://github.com/alexmarco/ddlglot/commit/8745c1b2cb93a0e65fdde656b0a2a226112d25ce))
+* rewrite CICD_ARCHITECTURE.md in English with PlantUML diagrams ([99efe72](https://github.com/alexmarco/ddlglot/commit/99efe72080c02cf842e8548a81f1d4abc5a2f26b))
+
 ## [0.2.0](https://github.com/alexmarco/ddlglot/compare/v0.1.0...v0.2.0) (2026-03-22)
 
 
