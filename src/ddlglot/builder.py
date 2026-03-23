@@ -296,7 +296,11 @@ class CreateBuilder:
         """Extract Python value from DefaultColumnConstraint."""
         inner = constraint.this
         if isinstance(inner, exp.Boolean):
-            return inner.this
+            lit = inner.this
+            if isinstance(lit, exp.Literal) and not lit.is_string:
+                result: Lit = lit.this
+                return result
+            return lit  # type: ignore[no-any-return]
         if isinstance(inner, exp.Literal):
             val = inner.this
             if isinstance(val, bool):
