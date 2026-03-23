@@ -349,6 +349,110 @@ Generate the SQL string with optional dialect-specific translation.
 - ``pad`` (int, optional): Alignment padding (default: 2)
 - ``max_text_width`` (int, optional): Max line width before wrapping (default: 80)
 
+
+DDL Inspection
+~~~~~~~~~~~~~~
+
+The ``.build()`` method returns an immutable ``DDL`` object that exposes all
+defined properties for inspection. This is useful for generating metadata,
+validating schemas, or integrating with other tools.
+
+.. code-block:: python
+
+    ddl = (
+        create("table")
+        .name("users")
+        .column("id", "INT", pk=True, not_null=True)
+        .column("name", "VARCHAR(100)")
+        .column("created_at", "TIMESTAMP")
+        .partitioned_by("created_at")
+        .location("s3://warehouse/users/")
+        .using("delta")
+        .tblproperties({"delta.autoOptimize": "true"})
+        .build()
+    )
+
+    # Inspect properties
+    ddl.table_name       # → "users"
+    ddl.kind             # → "TABLE"
+    ddl.columns          # → (ColumnDef(...), ColumnDef(...), ...)
+    ddl.primary_keys     # → ("id",)
+    ddl.partition_cols   # → ("created_at",)
+    ddl.location         # → "s3://warehouse/users/"
+    ddl.file_format      # → "DELTA"
+    ddl.tblproperties    # → {"delta.autoOptimize": "true"}
+
+    # .sql() and .to_ast() are also available on DDL
+    ddl.sql(dialect="spark")
+    ddl.to_ast()
+
+DDL object also exposes:
+
+- ``if_not_exists``: Whether IF NOT EXISTS was set
+- ``temporary``: Whether TEMPORARY was set
+- ``comment``: Table comment
+- ``unique_keys``: Tuple of unique constraint column tuples
+
+.. code-block:: python
+
+    ddl = (
+        create("table")
+        .name("users")
+        .column("id", "INT")
+        .column("email", "VARCHAR(100)")
+        .unique_key("email")
+        .build()
+    )
+
+    ddl.unique_keys  # → (("email",),)
+
+
+Builder Inspection Properties
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The builder itself also exposes inspection properties for convenience:
+
+.. code-block:: python
+
+    builder = (
+        create("table")
+        .name("users")
+        .column("id", "INT", pk=True)
+        .partitioned_by("id")
+    )
+
+    builder.table_name        # → "users"
+    builder.columns_defs       # → [ColumnDef(...)]
+    builder.primary_keys      # → ("id",)
+    builder.partition_columns  # → ("id",)
+    builder.unique_keys        # → ()
+
+
+ColumnDef
+^^^^^^^^^
+
+The ``ColumnDef`` NamedTuple represents a column definition:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Attribute
+     - Description
+   * - ``name``
+     - Column name (str)
+   * - ``dtype``
+     - Data type string (str)
+   * - ``not_null``
+     - Whether NOT NULL constraint is set (bool)
+   * - ``pk``
+     - Whether PRIMARY KEY constraint is set (bool)
+   * - ``unique``
+     - Whether UNIQUE constraint is set (bool)
+   * - ``default``
+     - Default value (Any)
+
+
 Supported Dialects
 ------------------
 

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Union
 from sqlglot import expressions as exp
 
 from .exceptions import ASTBuildError
+from .types import DDL, ColumnDef
 
 if TYPE_CHECKING:
     pass
@@ -228,4 +229,133 @@ class CreateBuilder:
             indent=indent,
             pad=pad,
             max_text_width=max_text_width,
+        )
+
+    def build(self) -> DDL:
+        """Freeze and return a DDL object for inspection.
+
+        Returns:
+            A DDL instance with all defined properties accessible.
+        """
+        ast = self.to_ast()
+        return DDL(
+            kind=self.kind,
+            table_name=self._table or "",
+            columns=tuple(self._build_column_defs()),
+            primary_keys=self._build_primary_keys(),
+            unique_keys=self._build_unique_keys(),
+            partition_cols=tuple(
+                col.name if isinstance(col, exp.Identifier) else str(col)
+                for col in self._partition_cols
+            ),
+            location=self._location,
+            file_format=self._using.upper() if self._using else None,
+            tblproperties=dict(self._tblprops),
+            comment=self._comment,
+            if_not_exists=self._if_not_exists,
+            temporary=bool(self._temporary),
+            _ast=ast,
+        )
+
+    def _build_column_defs(self) -> list[ColumnDef]:
+        """Build public ColumnDef objects from internal column definitions."""
+        result = []
+        for col in self._columns:
+            name = col.this.name if col.this else ""
+            dtype = col.kind.sql() if col.kind else ""
+
+            not_null = False
+            pk = False
+            unique = False
+            default = None
+
+            if col.constraints:
+                for constraint in col.constraints:
+                    if isinstance(constraint.kind, exp.NotNullColumnConstraint):
+                        not_null = True
+                    elif isinstance(constraint.kind, exp.PrimaryKey):
+                        pk = True
+                    elif isinstance(constraint.kind, exp.UniqueColumnConstraint):
+                        unique = True
+                    elif isinstance(constraint.kind, exp.DefaultColumnConstraint):
+                        default = self._extract_default_value(constraint.kind)
+
+            result.append(
+                ColumnDef(
+                    name=name,
+                    dtype=dtype,
+                    not_null=not_null,
+                    pk=pk,
+                    unique=unique,
+                    default=default,
+                )
+            )
+        return result
+
+    def _extract_default_value(self, constraint: exp.DefaultColumnConstraint) -> Lit | None:
+        """Extract Python value from DefaultColumnConstraint."""
+        inner = constraint.this
+        if isinstance(inner, exp.Boolean):
+            return inner.this
+        if isinstance(inner, exp.Literal):
+            val = inner.this
+            if isinstance(val, bool):
+                return val
+            if isinstance(val, (int, float)):
+                return val
+            if isinstance(val, str):
+                if val.isdigit():
+                    return int(val)
+                try:
+                    return float(val)
+                except ValueError:
+                    return val
+        return None
+
+    def _build_primary_keys(self) -> tuple[str, ...]:
+        """Build tuple of primary key column names."""
+        for constraint in self._table_constraints:
+            if isinstance(constraint, exp.PrimaryKey):
+                return tuple(c.name for c in constraint.expressions)
+        return ()
+
+    def _build_unique_keys(self) -> tuple[tuple[str, ...], ...]:
+        """Build tuple of unique constraint column tuples."""
+        result: list[tuple[str, ...]] = []
+        for constraint in self._table_constraints:
+            if isinstance(constraint, exp.UniqueColumnConstraint):
+                if constraint.this and constraint.this.expressions:
+                    result.append(tuple(c.name for c in constraint.this.expressions))
+                else:
+                    result.append(())
+        if result:
+            return tuple(result)
+        return ()
+
+    @property
+    def table_name(self) -> str | None:
+        """Return the table/view name."""
+        return self._table
+
+    @property
+    def columns_defs(self) -> list[ColumnDef]:
+        """Return parsed column definitions."""
+        return self._build_column_defs()
+
+    @property
+    def primary_keys(self) -> tuple[str, ...]:
+        """Return primary key column names."""
+        return self._build_primary_keys()
+
+    @property
+    def unique_keys(self) -> tuple[tuple[str, ...], ...]:
+        """Return unique constraint column tuples."""
+        return self._build_unique_keys()
+
+    @property
+    def partition_columns(self) -> tuple[str, ...]:
+        """Return partition column names."""
+        return tuple(
+            col.name if isinstance(col, exp.Identifier) else str(col)
+            for col in self._partition_cols
         )

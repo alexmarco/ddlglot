@@ -9,9 +9,12 @@ from ddlglot.exceptions import (
     SchemaValidationError,
     ValidationError,
 )
+from ddlglot.types import DDL, ColumnDef
 
 __all__ = [
+    "DDL",
     "ASTBuildError",
+    "ColumnDef",
     "CreateBuilder",
     "DDLGlotError",
     "SchemaValidationError",
