@@ -1,4 +1,6 @@
-![ddlglot logo](./image/logo.png)
+<p align="center">
+  <img src="./image/logo.png" width="200" alt="ddlglot logo"/>
+</p>
 
 # ddlglot
 
