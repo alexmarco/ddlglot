@@ -6,7 +6,7 @@ from typing import NamedTuple
 
 import pytest
 
-from ddlglot import DDL, create
+from ddlglot import DDL, UniqueDef, create
 
 
 class DialectCase(NamedTuple):
@@ -107,7 +107,7 @@ class TestBuildMethod:
             .unique_key("email", "phone")
             .build()
         )
-        assert ddl.unique_keys == (("email", "phone"),)
+        assert ddl.unique_keys == (UniqueDef(columns=("email", "phone")),)
 
     def test_build_if_not_exists(self) -> None:
         """Test that if_not_exists flag is captured."""
@@ -239,7 +239,7 @@ class TestBuilderProperties:
     def test_unique_keys_property(self) -> None:
         """Test unique_keys property."""
         builder = create("table").name("t").unique_key("email", "phone")
-        assert builder.unique_keys == (("email", "phone"),)
+        assert builder.unique_keys == (UniqueDef(columns=("email", "phone")),)
 
     def test_partition_columns_property(self) -> None:
         """Test partition_columns property."""
