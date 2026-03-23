@@ -1,6 +1,6 @@
 [project]
 name = "ddlglot"
-version = "0.3.0"
+version = "1.0.0"
 description = "Fluent DDL builder using SQLGlot AST"
 readme = "README.md"
 authors = [
