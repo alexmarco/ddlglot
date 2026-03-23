@@ -356,7 +356,7 @@ cd docs/_build/html && python -m http.server 8080
 
 .. warning::
 
-   **NEVER commit directly to main.** All changes must go through pull requests.
+   **NEVER push directly to main.** All changes must go through pull requests.
    Even as repository owner, use feature branches to maintain a clean history
    and ensure CI validation.
 
@@ -385,31 +385,38 @@ cd docs/_build/html && python -m http.server 8080
 
 ---
 
-## 9. Release Process (Manual)
+## 9. Release Process
 
-Release Please runs in manual mode, not on every push. This gives you full
-control over when to release.
+Release Please is **manual-only** (no automatic runs on push). This gives you
+full control over when to release.
 
 ### Trigger Release
 
-```bash
-# Option 1: GitHub CLI
-gh workflow run release-please.yml
+.. code-block:: bash
 
-# Option 2: Web UI
-# Go to: Actions → Release Please → Run workflow
-```
+    # Option 1: GitHub CLI
+    gh workflow run release-please.yml
+
+    # Option 2: Web UI
+    # Go to: Actions → Release Please → Run workflow
 
 ### Release Workflow
 
 1. Run the workflow manually (see above)
 2. Release Please creates/updates a Release PR with all changes since
    the last release
-3. Review the changelog in the Release PR
-4. Merge the Release PR to actually publish
+3. CI runs automatically on the Release PR (no manual CI trigger needed)
+4. Review the changelog in the Release PR
+5. Merge the Release PR → tag + GitHub Release + PyPI publish
 
-- **No release triggered**: Merging regular PRs to main
-- **Release triggered**: Merging the Release PR
+**When does CI run?**
+
+- On every PR (including the Release PR) — no branch filters
+- On every push to ``main`` or ``develop``
+- On manual trigger
+
+**No release triggered**: Merging regular PRs to main
+**Release triggered**: Merging the Release PR
 
 ### Close Unexpected Release PRs
 
