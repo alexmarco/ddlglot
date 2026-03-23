@@ -1,0 +1,38 @@
+/* Google Fonts: OpenSans for UI text, Fira Code for code blocks */
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Open+Sans:wght@400;500;600;700&display=swap');
+
+/* Override theme fonts */
+:root {
+    --pst-font-family-base: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --pst-font-family-code: 'Fira Code', Consolas, 'Courier New', monospace;
+}
+
+/* Sphinx default overrides */
+body, .bd-content {
+    font-family: var(--pst-font-family-base);
+}
+
+/* Code blocks */
+.highlight, pre.literal-block, pre.code, code.literal {
+    font-family: var(--pst-font-family-code) !important;
+}
+
+/* Sidebar and navbar */
+.bd-header, .bd-sidebar-primary, .sidebar-primary {
+    font-family: var(--pst-font-family-base);
+}
+
+/* Logo title text styling */
+.logo__title {
+    font-family: var(--pst-font-family-base);
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: inherit;
+}
+
+/* Ensure code blocks have proper background */
+.highlight {
+    background-color: var(--pst-color-code-background) !important;
+    border-radius: 4px;
+    padding: 0.5em;
+}
