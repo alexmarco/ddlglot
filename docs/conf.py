@@ -31,9 +31,8 @@ html_theme_options = {
     "logo": {
         "image_light": "_static/logo.png",
         "image_dark": "_static/logo.png",
-        "text": "ddlglot",
+        "text": f"ddlglot v{release}",
     },
-    "navbar_start": ["navbar-logo", "version"],
 }
 
 intersphinx_mapping = {
