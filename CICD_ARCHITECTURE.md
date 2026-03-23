@@ -14,6 +14,17 @@ The ddlglot project has **3 pipelines** (workflows) that run independently:
 | **Deploy Docs** | Build and publish documentation | On every push to main |
 | **Release Please** | Manage releases and publish to PyPI | Manual only |
 
+```mermaid
+flowchart LR
+    A["**Push to main**"] --> B["**CI Pipeline**"]
+    A --> C["**Deploy Docs**"]
+    A -.->|"workflow_dispatch"| D["**Release Please**"]
+    B --> E["✓ PR merged + Tests pass"]
+    C --> F["GitHub Pages"]
+    D --> G["Release PR"]
+    G --> H["Merge"] --> I["PyPI"]
+```
+
 ---
 
 ## 2. CI Pipeline (Code Validation)
@@ -32,33 +43,32 @@ The CI pipeline is the most important one and runs **frequently**. Its goal is t
 
 The CI pipeline has **2 jobs** that run sequentially:
 
-```
-JOB 1: TEST (runs first)
-──────────────────────────────────────────────────────────────
-  1. Checkout source code
-  2. Install Python 3.13
-  3. Install uv package manager
-  4. Install all dependencies
-  5. Ruff (linter)       — verifies code style
-  6. Ruff (formatter)    — verifies formatting
-  7. Commitlint          — verifies commit messages
-  8. Mypy                — type checking (errors only)
-  9. Pytest              — runs tests (151 tests)
- 10. Codecov             — uploads code coverage
+```mermaid
+flowchart TB
+    subgraph TEST["**JOB 1: TEST**"]
+        direction TB
+        A1["Checkout source code"] --> A2["Install Python 3.13"]
+        A2 --> A3["Install uv"]
+        A3 --> A4["Install dependencies"]
+        A4 --> A5["Ruff (linter)"]
+        A5 --> A6["Ruff (formatter)"]
+        A6 --> A7["Commitlint"]
+        A7 --> A8["Mypy"]
+        A8 --> A9["Pytest (151 tests)"]
+        A9 --> A10["Codecov"]
+        A10 -.->|"FAIL"| STOP["Pipeline stops\nCommit marked FAILED"]
+    end
 
-If any step fails, the pipeline stops and marks the commit as FAILED.
+    TEST -.->|"pass"| BUILD
 
-                    │ (only if TEST passes)
-                    ▼
-
-JOB 2: BUILD (runs after TEST)
-──────────────────────────────────────────────────────────────
-  1. Checkout source code
-  2. Install Python 3.13
-  3. Install build tools
-  4. Build Python package (.whl and .tar.gz)
-  5. Verify the package imports correctly
-  6. Upload artifacts (available 5 days)
+    subgraph BUILD["**JOB 2: BUILD**"]
+        direction TB
+        B1["Checkout source code"] --> B2["Install Python 3.13"]
+        B2 --> B3["Install build tools"]
+        B3 --> B4["Build .whl + .tar.gz"]
+        B4 --> B5["Verify import"]
+        B5 --> B6["Upload artifacts\n(available 5 days)"]
+    end
 ```
 
 ### 2.3. What each tool checks
@@ -90,23 +100,24 @@ This pipeline builds the Sphinx documentation and publishes it to GitHub Pages.
 
 ### 3.2. Pipeline phases
 
-```
-JOB 1: BUILD
-──────────────────────────────────────────────────────────────
-  1. Checkout code
-  2. Install Python 3.13
-  3. Install uv
-  4. Install docs dependencies (sphinx, sphinx-autoapi, sphinxcontrib-kroki)
-  5. Build HTML documentation with Sphinx
-  6. Upload as artifact for GitHub Pages
+```mermaid
+flowchart TB
+    subgraph BUILD["**JOB 1: BUILD**"]
+        direction TB
+        A1["Checkout code"] --> A2["Install Python 3.13"]
+        A2 --> A3["Install uv"]
+        A3 --> A4["Install docs deps:\nsphinx, sphinx-autoapi,\nsphinxcontrib-kroki"]
+        A4 --> A5["Build HTML with Sphinx\n(kroki renders diagrams)"]
+        A5 --> A6["Upload as artifact\nfor GitHub Pages"]
+    end
 
-                    │
-                    ▼
+    BUILD --> DEPLOY
 
-JOB 2: DEPLOY
-──────────────────────────────────────────────────────────────
-  1. Deploy to GitHub Pages
-     URL: https://alexmarco.github.io/ddlglot/
+    subgraph DEPLOY["**JOB 2: DEPLOY**"]
+        D1["Deploy to GitHub Pages"]
+    end
+
+    DEPLOY -.->|"URL"| URL["https://alexmarco.github.io/ddlglot/"]
 ```
 
 ### 3.3. Features
@@ -131,30 +142,26 @@ This pipeline manages semantic versions and publishes the package to PyPI.
 
 ### 4.2. Pipeline phases
 
-```
-JOB 1: RELEASE-PLEASE
-──────────────────────────────────────────────────────────────
-  1. Checkout code
-  2. Run Release Please
-  3. Analyze commits since last version
-  4. Determine change type (major/minor/patch)
-  5. Create or update Release PR
+```mermaid
+flowchart TB
+    subgraph RP["**JOB 1: RELEASE-PLEASE**"]
+        direction TB
+        A1["Checkout code"] --> A2["Run Release Please"]
+        A2 --> A3["Analyze commits since last version"]
+        A3 --> A4["Determine change type\n(major/minor/patch)"]
+        A4 --> A5["Create or update\nRelease PR"]
+        A5 --> OUTPUTS["**Outputs**\nreleases_created: true/false\nversion: \"0.3.0\"\nsha: commit-hash"]
+    end
 
-OUTPUTS:
-  - releases_created: true/false
-  - version: "0.3.0"
-  - sha: commit hash
+    RP -.->|"releases_created = true"| PUB
 
-                    │ (only if releases_created = true)
-                    ▼
-
-JOB 2: PUBLISH
-──────────────────────────────────────────────────────────────
-  1. Checkout at tag commit
-  2. Install Python 3.13
-  3. Install uv
-  4. Build the package
-  5. Publish to PyPI (Trusted Publisher)
+    subgraph PUB["**JOB 2: PUBLISH**"]
+        direction TB
+        B1["Checkout at tag commit"] --> B2["Install Python 3.13"]
+        B2 --> B3["Install uv"]
+        B3 --> B4["Build package"]
+        B4 --> B5["Publish to PyPI\n(Trusted Publisher)"]
+    end
 ```
 
 ### 4.3. How Release Please works
@@ -163,30 +170,16 @@ Release Please automates semantic versioning based on commit messages.
 
 **Complete flow**:
 
-```
-1. Developer makes a Conventional Commit:
-   "feat(builder): add DDL inspection"
-
-2. Push to main (via regular PR merge)
-
-3. Run Release Please manually:
-   gh workflow run release-please.yml
-
-4. Release Please detects "feat:" (new feature)
-
-5. Creates a Release PR ("chore: release 0.3.0") with:
-   - Accumulated changelog
-   - Calculated new version
-
-6. CI runs automatically on the Release PR
-
-7. Review and merge the Release PR
-
-8. GitHub creates tag (v0.3.0)
-
-9. GitHub creates GitHub Release
-
-10. Job PUBLISH publishes to PyPI
+```mermaid
+flowchart LR
+    A["**1.** Developer makes a\nConventional Commit:\n\"feat(builder): add DDL inspection\""] --> B["**2.** Push to main\n(via regular PR merge)"]
+    B --> C["**3.** Run Release Please:\ngh workflow run release-please.yml"]
+    C --> D["**4.** Release Please detects\n\"feat:\" (new feature)"]
+    D --> E["**5.** Creates Release PR:\n\"chore: release 0.3.0\"\n- Changelog\n- Calculated version"]
+    E --> F["**6.** CI runs automatically\non the Release PR"]
+    F --> G["**7.** Review and merge PR"]
+    G --> H["**8.** GitHub creates\ntag (v0.3.0) +\nGitHub Release"]
+    H --> I["**9.** PUBLISH job\npublishes to PyPI"]
 ```
 
 **Change types based on Conventional Commits**:
@@ -221,6 +214,15 @@ Release Please **does not publish automatically**. It only creates the Release P
 
 ### 6.1. Normal change (bugfix, feature, docs)
 
+```mermaid
+flowchart LR
+    A["Create branch from main"] --> B["Work on branch"]
+    B --> C["Push"] --> D["CI runs"]
+    D --> E["Open PR"] --> F["CI runs on PR"]
+    F --> G["Review and merge"]
+    G --> H["CI on main + Deploy Docs"]
+```
+
 1. Create branch from `main`
 2. Work on the branch
 3. Push → CI runs
@@ -238,13 +240,17 @@ Release Please **does not publish automatically**. It only creates the Release P
 
 ### 6.3. Make a release
 
+```mermaid
+flowchart LR
+    A["All changes on main"] --> B["gh workflow run\nrelease-please.yml"]
+    B --> C["Release PR created\nwith changelog + version"]
+    C --> D["CI runs automatically\non Release PR"]
+    D --> E["Review PR"]
+    E --> F["Merge PR"] --> G["Tag + Release + PyPI"]
+```
+
 1. Ensure all desired changes are on `main`
-2. Trigger Release Please manually:
-
-   ```bash
-   gh workflow run release-please.yml
-   ```
-
+2. Trigger Release Please manually: `gh workflow run release-please.yml`
 3. Release Please creates a PR with changelog and version
 4. CI runs automatically on the Release PR (no manual trigger needed)
 5. Review the PR
@@ -342,4 +348,5 @@ No. It only creates the PR. You decide when to merge.
 | **Release PR** | Special PR created by Release Please |
 | **Semantic Versioning** | Versioning as major.minor.patch |
 | **OIDC** | Authentication protocol for publishing |
-| **Kroki** | Diagram rendering service (kroki.io) |
+| **Mermaid** | Diagram rendering in Markdown (github.com/mermaid) |
+| **Kroki** | Diagram rendering service for Sphinx docs (kroki.io) |
