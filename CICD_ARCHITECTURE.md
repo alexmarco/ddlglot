@@ -1,400 +1,477 @@
-# Arquitectura CI/CD de ddlglot
+# CI/CD Architecture
 
-Este documento describe la arquitectura de integración continua y despliegue
-(CI/CD) del proyecto ddlglot. Está pensado para que cualquier desarrollador,
-incluso sin experiencia previa en CI/CD, pueda entender cómo funciona y
-cuándo se ejecutan las diferentes partes del sistema.
+This document describes the continuous integration and deployment (CI/CD) architecture of the ddlglot project. It is designed so that any developer, even without prior CI/CD experience, can understand how the system works and when each part is executed.
 
 ---
 
-## 1. Visión General
+## 1. Overview
 
-El proyecto ddlglot cuenta con **3 pipelines** (flujos de trabajo) que se
-ejecutan de forma independiente:
+The ddlglot project has **3 pipelines** (workflows) that run independently:
 
-| Pipeline | Propósito | Cuándo se ejecuta |
-|----------|-----------|-------------------|
-| **CI** | Validar código (tests, lint, type checking) | En cada push y PR |
-| **Deploy Docs** | Construir y publicar la documentación | En cada push a main |
-| **Release Please** | Gestionar releases y publicar a PyPI | Manual o en push a main |
+.. list-table::
+   :header-rows: 1
+   :widths: 20 40 40
 
----
-
-## 2. Pipeline CI (Validación de Código)
-
-El pipeline de CI es el más importante y se ejecuta **frecuentemente**. Su
-objetivo es asegurar que el código cumple con los estándares de calidad
-antes de ser mergeado.
-
-### 2.1. Cuándo se ejecuta
-
-| Evento | Se ejecuta |
-|--------|-----------|
-| Push a `main` o `develop` | Sí |
-| Pull Request hacia `main` o `develop` | Sí |
-| Ejecución manual | Sí |
-
-### 2.2. Fases del Pipeline CI
-
-El pipeline CI tiene **2 jobs** que se ejecutan en secuencia:
-
-```
-JOB 1: TEST (se ejecuta primero)
-────────────────────────────────────────
-  1. Checkout del código fuente
-  2. Instalar Python 3.13
-  3. Instalar uv (gestor de paquetes)
-  4. Instalar todas las dependencias
-  5. Ruff (linter)        → verifica estilo de código
-  6. Ruff (formateador)   → verifica formato
-  7. Commitlint           → verifica mensajes de commit
-  8. Mypy                 → verificación de tipos (solo errores)
-  9. Pytest               → ejecuta tests (151 tests)
- 10. Codecov              → sube cobertura de código
-
-Si alguna fase falla, el pipeline se detiene y marca el commit como
-"failed" (rojo) en GitHub.
-
-            │
-            ▼ (solo si TEST pasa)
-
-JOB 2: BUILD (se ejecuta después de TEST)
-────────────────────────────────────────
-  1. Checkout del código fuente
-  2. Instalar Python 3.13
-  3. Instalar herramientas de build (build, hatch)
-  4. Construir el paquete Python (.whl y .tar.gz)
-  5. Verificar que se puede importar correctamente
-  6. Subir los archivos como "artifact" (disponibles 5 días)
-```
-
-### 2.3. Qué verifica cada herramienta
-
-| Herramienta | Qué verifica | ¿Bloquea el merge? |
-|-------------|--------------|-------------------|
-| **Ruff** (check) | Estilo de código (imports, naming, etc.) | Sí |
-| **Ruff** (format) | Formato del código | Sí |
-| **Commitlint** | Mensajes de commit siguen Conventional Commits | Sí |
-| **Mypy** | Errores de tipos (no warnings) | Solo errores |
-| **Pytest** | Todos los tests pasan | Sí |
-
-### 2.4. Ejemplo visual
-
-```
-Desarrollador hace push
-         │
-         ▼
-┌──────────────────────────────────────────┐
-│  CI Pipeline empieza                     │
-├──────────────────────────────────────────┤
-│  Job TEST                                │
-│  ├─ Ruff (linter)      → ✅ pasa        │
-│  ├─ Ruff (format)      → ✅ pasa        │
-│  ├─ Commitlint         → ✅ pasa        │
-│  ├─ Mypy               → ✅ pasa        │
-│  ├─ Pytest             → ✅ pasa        │
-│  └─ Codecov            → ✅ pasa        │
-├──────────────────────────────────────────┤
-│  Job BUILD                               │
-│  ├─ Build package      → ✅ genera dist/ │
-│  └─ Verify import      → ✅ importa OK   │
-├──────────────────────────────────────────┤
-│  ✓ CI completado (verde en GitHub)       │
-└──────────────────────────────────────────┘
-```
+   * - Pipeline
+     - Purpose
+     - When it runs
+   * - **CI**
+     - Validate code (tests, lint, type checking)
+     - On every push and PR
+   * - **Deploy Docs**
+     - Build and publish documentation
+     - On every push to main
+   * - **Release Please**
+     - Manage releases and publish to PyPI
+     - Manual or on push to main
 
 ---
 
-## 3. Pipeline Deploy Docs (Documentación)
+## 2. CI Pipeline (Code Validation)
 
-Este pipeline construye la documentación Sphinx y la publica en GitHub Pages.
+The CI pipeline is the most important one and runs **frequently**. Its goal is to ensure code meets quality standards before merging.
 
-### 3.1. Cuándo se ejecuta
+### 2.1. When it runs
 
-| Evento | Se ejecuta |
-|--------|-----------|
-| Push a `main` | Sí |
-| Ejecución manual | Sí |
-| PRs | No |
-| Otras ramas | No |
+.. list-table::
+   :header-rows: 1
+   :widths: 40 20
 
-**Importante**: Solo se ejecuta cuando se hace push a la rama `main`.
+   * - Event
+     - Runs
+   * - Push to ``main`` or ``develop``
+     - Yes
+   * - Pull Request to ``main`` or ``develop``
+     - Yes
+   * - Manual execution
+     - Yes
 
-### 3.2. Fases
+### 2.2. Pipeline phases
 
-```
-JOB 1: BUILD
-────────────────────────────────────────
-  1. Checkout del código
-  2. Instalar Python 3.13
-  3. Instalar uv
-  4. Instalar dependencias de docs (sphinx, sphinx-autoapi)
-  5. Construir documentación HTML con Sphinx
-  6. Subir como "artifact" para GitHub Pages
+The CI pipeline has **2 jobs** that run sequentially:
 
-            │
-            ▼
+.. plantuml::
+   @startuml
+   skinparam defaultTextAlignment center
+   skinparam wrapWidth 300
 
-JOB 2: DEPLOY
-────────────────────────────────────────
-  1. Desplegar a GitHub Pages
-  2. URL: https://alexmarco.github.io/ddlglot/
-```
+   |**JOB 1: TEST**|
+   start
+   :Checkout source code;
+   :Install Python 3.13;
+   :Install uv package manager;
+   :Install all dependencies;
+   :Ruff (linter) — verifies code style;
+   :Ruff (formatter) — verifies formatting;
+   :Commitlint — verifies commit messages;
+   :Mypy — type checking (errors only);
+   :Pytest — runs tests (151 tests);
+   :Codecov — uploads code coverage;
+   note right
+     If any step fails,
+     the pipeline stops
+     and marks the commit as **failed**.
+   end note
+   |**JOB 2: BUILD**|
+   :Checkout source code;
+   :Install Python 3.13;
+   :Install build tools;
+   :Build Python package (.whl and .tar.gz);
+   :Verify the package imports correctly;
+   :Upload artifacts (available 5 days);
+   stop
 
-### 3.3. Características
+   @enduml
 
-- **Concurrencia**: Si hay otro despliegue en curso, no se cancela.
-- **Versión dinámica**: La versión se lee automáticamente de `pyproject.toml`.
-- **sphinx-autoapi**: La API reference se genera automáticamente desde el
-  código fuente.
+### 2.3. What each tool checks
 
----
+.. list-table::
+   :header-rows: 1
+   :widths: 25 50 25
 
-## 4. Pipeline Release Please (Releases y PyPI)
-
-Este pipeline gestiona las versiones semánticas y publica el paquete en PyPI.
-
-### 4.1. Cuándo se ejecuta
-
-| Evento | Se ejecuta |
-|--------|-----------|
-| Ejecución manual | Sí |
-| Push a `main` | Sí |
-
-### 4.2. Fases
-
-```
-JOB 1: RELEASE-PLEASE
-────────────────────────────────────────
-  1. Checkout del código
-  2. Ejecutar Release Please
-     ├─ Analiza commits desde la última versión
-     ├─ Determina el tipo de cambio (major/minor/patch)
-     └─ Crea o actualiza un "Release PR"
-
-  SALIDAS (outputs):
-  - releases_created: true/false
-  - version: "0.2.0"
-  - sha: commit hash
-
-            │
-            ▼ (solo si releases_created = true)
-
-JOB 2: PUBLISH
-────────────────────────────────────────
-  1. Checkout en el commit del tag
-  2. Instalar Python 3.13
-  3. Instalar uv
-  4. Construir el paquete
-  5. Publicar en PyPI (Trusted Publisher)
-```
-
-### 4.3. Cómo funciona Release Please
-
-Release Please automatiza el versionado semántico basándose en los
-mensajes de commit.
-
-**Flujo completo**:
-
-```
-1. Desarrollador hace commit conventional:
-   "feat(builder): add DDL inspection"
-
-2. Se hace push a main (o se ejecuta manualmente)
-
-3. Release Please detecta el commit "feat:" (nueva feature)
-
-4. Crea un PR de Release ("chore: release 0.2.0") con:
-   - Changelog acumulado
-   - Nueva versión calculada
-
-5. Se mergea el PR de Release:
-   - Se crea tag en GitHub (v0.2.0)
-   - Se crea GitHub Release
-   - Se publica en PyPI (job publish)
-```
-
-**Tipos de cambios según Conventional Commits**:
-
-| Prefijo | Tipo de cambio | Ejemplo de versión |
-|---------|----------------|-------------------|
-| `feat:` | Nueva funcionalidad | 0.1.0 → 0.2.0 |
-| `fix:` | Bug fix | 0.1.0 → 0.1.1 |
-| `docs:` | Documentación | No cambia versión |
-| `ci:` | Cambios en CI/CD | No cambia versión |
-
-### 4.4. Importante: No hay releases automáticas
-
-Release Please **no publica automáticamente**. Solo crea el PR de Release.
-Tú decides cuándo mergear y publicar.
+   * - Tool
+     - What it checks
+     - Blocks merge
+   * - **Ruff** (check)
+     - Code style (imports, naming, etc.)
+     - Yes
+   * - **Ruff** (format)
+     - Code formatting
+     - Yes
+   * - **Commitlint**
+     - Commit messages follow Conventional Commits
+     - Yes
+   * - **Mypy**
+     - Type errors (not warnings)
+     - Errors only
+   * - **Pytest**
+     - All tests pass
+     - Yes
 
 ---
 
-## 5. Resumen de Triggers
+## 3. Deploy Docs Pipeline (Documentation)
 
-| Acción | CI | Deploy Docs | Release Please |
-|--------|-----|-------------|-----------------|
-| Push a `main` | Sí | Sí | Sí |
-| Push a `develop` | Sí | No | No |
-| Push a otra rama | No | No | No |
-| PR a `main` | Sí | No | No |
-| PR a `develop` | Sí | No | No |
-| Ejecución manual | Sí | Sí | Sí |
+This pipeline builds the Sphinx documentation and publishes it to GitHub Pages.
 
----
+### 3.1. When it runs
 
-## 6. Casos de Uso Comunes
+.. list-table::
+   :header-rows: 1
+   :widths: 40 20
 
-### 6.1. Cambio normal (bugfix, feature, docs)
+   * - Event
+     - Runs
+   * - Push to ``main``
+     - Yes
+   * - Manual execution
+     - Yes
+   * - PRs
+     - No
+   * - Other branches
+     - No
 
-```
-1. Crear rama desde main
-2. Trabajar en la rama
-3. Push → CI se ejecuta
-4. Abrir PR → CI se ejecuta en el PR
-5. Revisar y mergear
-6. CI se ejecuta en main (post-merge)
-7. Deploy Docs se ejecuta automáticamente
-```
+**Important**: It only runs on pushes to the ``main`` branch.
 
-### 6.2. Actualizar documentación
+### 3.2. Pipeline phases
 
-```
-1. Hacer cambios en docs/
-2. Push a main
-3. Deploy Docs se ejecuta automáticamente
-4. Verificar en https://alexmarco.github.io/ddlglot/
-```
+.. plantuml::
+   @startuml
+   skinparam defaultTextAlignment center
 
-### 6.3. Hacer una release
+   |**JOB 1: BUILD**|
+   start
+   :Checkout code;
+   :Install Python 3.13;
+   :Install uv;
+   :Install docs dependencies (sphinx, sphinx-autoapi, sphinxcontrib-kroki);
+   :Build HTML documentation with Sphinx;
+   :Upload as artifact for GitHub Pages;
+   |**JOB 2: DEPLOY**|
+   :Deploy to GitHub Pages;
+   stop
 
-```
-1. Asegurarse de que todos los cambios deseados están en main
-2. Opciones para disparar Release Please:
-   a. Ejecutar manual: gh workflow run release-please.yml
-   b. Hacer push a main (se dispara automáticamente)
-3. Release Please crea un PR con changelog y versión
-4. Revisar el PR
-5. Mergear el PR → tag + GitHub Release + PyPI publish
-```
+   note right
+     URL: https://alexmarco.github.io/ddlglot/
+   end note
 
----
+   @enduml
 
-## 7. Diagrama General
+### 3.3. Features
 
-```
-                    PUSH A MAIN
-                         │
-            ┌────────────┼────────────┐
-            │            │            │
-            ▼            ▼            ▼
-       ┌─────────┐  ┌──────────┐  ┌──────────────┐
-       │   CI    │  │  Deploy  │  │   Release    │
-       │Pipeline │  │   Docs   │  │   Please     │
-       └────┬────┘  └────┬─────┘  └──────┬───────┘
-            │            │               │
-            │        (build)        (create PR)
-            │            │               │
-            │            ▼            merge PR
-            │      GitHub Pages          │
-            │                            ▼
-            │                      ┌──────────┐
-            │                      │ Publish  │
-            │                      │   to     │
-            │                      │   PyPI   │
-            │                      └──────────┘
-            │
-            ▼
-       PR merge + Tests OK
-```
+- **Concurrency**: If another deployment is in progress, it does not cancel.
+- **Dynamic version**: The version is read automatically from ``pyproject.toml``.
+- **sphinx-autoapi**: The API reference is generated automatically from the source code.
+- **sphinxcontrib-kroki**: Diagrams are rendered via kroki.io at build time.
 
 ---
 
-## 8. Configuración de GitHub Pages
+## 4. Release Please Pipeline (Releases and PyPI)
 
-- **URL**: https://alexmarco.github.io/ddlglot/
-- **Fuente**: Generado automáticamente por GitHub
-- **Build tool**: Sphinx
-- **Tema**: sphinx_book_theme
-- **Versión**: Leída dinámicamente de `pyproject.toml`
+This pipeline manages semantic versions and publishes the package to PyPI.
+
+### 4.1. When it runs
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 20
+
+   * - Event
+     - Runs
+   * - Manual execution
+     - Yes
+   * - Push to ``main``
+     - Yes
+
+### 4.2. Pipeline phases
+
+.. plantuml::
+   @startuml
+   skinparam defaultTextAlignment center
+   skinparam wrapWidth 300
+
+   |**JOB 1: RELEASE-PLEASE**|
+   start
+   :Checkout code;
+   :Run Release Please;
+   :Analyze commits since last version;
+   :Determine change type (major/minor/patch);
+   :Create or update Release PR;
+   stop
+
+   detach
+
+   (**releases_created = true**)
+
+   |**JOB 2: PUBLISH**|
+   :Checkout at tag commit;
+   :Install Python 3.13;
+   :Install uv;
+   :Build the package;
+   :Publish to PyPI (Trusted Publisher);
+   stop
+
+   @enduml
+
+### 4.3. How Release Please works
+
+Release Please automates semantic versioning based on commit messages.
+
+**Complete flow**:
+
+.. plantuml::
+   @startuml
+   skinparam defaultTextAlignment center
+   skinparam wrapWidth 300
+
+   start
+   :Developer makes a Conventional Commit:\n"feat(builder): add DDL inspection";
+   :Push to main (or run manually);
+   :Release Please detects "feat:" (new feature);
+   :Creates a Release PR ("chore: release 0.2.0") with:\n  - Accumulated changelog\n  - Calculated new version;
+   :Review and merge the Release PR;
+   :GitHub creates tag (v0.2.0);
+   :GitHub creates GitHub Release;
+   :Job PUBLISH publishes to PyPI;
+   stop
+
+   @enduml
+
+**Change types based on Conventional Commits**:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 35 45
+
+   * - Prefix
+     - Change type
+     - Version example
+   * - ``feat:``
+     - New functionality
+     - 0.1.0 → 0.2.0
+   * - ``fix:``
+     - Bug fix
+     - 0.1.0 → 0.1.1
+   * - ``docs:``
+     - Documentation
+     - No version change
+   * - ``ci:``
+     - CI/CD changes
+     - No version change
+
+### 4.4. Important: No automatic releases
+
+Release Please **does not publish automatically**. It only creates the Release PR. You decide when to merge and publish.
 
 ---
 
-## 9. Trusted Publisher (PyPI)
+## 5. Trigger Summary
 
-El proyecto usa Trusted Publisher de PyPI, lo que significa:
+.. list-table::
+   :header-rows: 1
+   :widths: 30 15 20 25
 
-- No se necesita token API de PyPI en los secrets
-- La publicación usa OIDC (OpenID Connect)
-- Solo el workflow de Release Please puede publicar
-- El entorno se llama `pypi`
-
----
-
-## 10. Permisos y Seguridad
-
-| Workflow | contents | pages | pull-requests | id-token |
-|----------|----------|-------|---------------|----------|
-| CI | read | - | - | - |
-| Docs | read | write | - | write |
-| Release | write | - | write | write |
-
-- **contents**: Leer/editar contenido del repo
-- **pages**: Desplegar a GitHub Pages
-- **pull-requests**: Crear/editar PRs
-- **id-token**: Autenticación OIDC para PyPI
-
----
-
-## 11. Preguntas Frecuentes
-
-### ¿Puedo ejecutar un workflow manualmente?
-
-Sí, todos los workflows tienen `workflow_dispatch`. Puedes ejecutarlos
-desde la pestaña "Actions" en GitHub.
-
-### ¿Qué pasa si falla el CI?
-
-El commit/PR se marca como fallido (rojo). No se puede hacer merge hasta
-que todos los checks pasen.
-
-### ¿Cuánto tiempo tarda el CI?
-
-Aproximadamente 1-2 minutos.
-
-### ¿Puedo hacer push directamente a main?
-
-Técnicamente sí (porque eres owner), pero **no se debe hacer**. Siempre
-se debe crear un PR.
-
-### ¿Cuándo se publica a PyPI?
-
-Solo cuando se hace merge del Release PR creado por Release Please.
-
-### ¿Qué es el "Release PR"?
-
-Es un PR especial creado por Release Please que contiene:
-- Changelog de cambios desde la última versión
-- Nueva versión calculada automáticamente
-- Etiqueta `autorelease: pending`
-
-### ¿Release Please publica automáticamente?
-
-No. Solo crea el PR. Tú decides cuándo mergear.
+   * - Action
+     - CI
+     - Deploy Docs
+     - Release Please
+   * - Push to ``main``
+     - Yes
+     - Yes
+     - Yes
+   * - Push to ``develop``
+     - Yes
+     - No
+     - No
+   * - Push to other branch
+     - No
+     - No
+     - No
+   * - PR to ``main``
+     - Yes
+     - No
+     - No
+   * - PR to ``develop``
+     - Yes
+     - No
+     - No
+   * - Manual execution
+     - Yes
+     - Yes
+     - Yes
 
 ---
 
-## 12. Glosario
+## 6. Common Use Cases
 
-| Término | Significado |
-|---------|-------------|
-| **Pipeline** | Flujo automatizado de tareas en GitHub Actions |
-| **Job** | Conjunto de steps que se ejecutan en una máquina |
-| **Step** | Una tarea individual (ej: "Run tests") |
-| **Artifact** | Archivos generados que se pueden descargar |
-| **Workflow** | Archivo YAML que define un pipeline |
-| **Trusted Publisher** | Autenticación en PyPI sin tokens |
-| **Conventional Commits** | Formato de mensajes (feat:, fix:, etc.) |
-| **Release PR** | PR especial que crea Release Please |
-| **Semantic Versioning** | Versionado major.minor.patch |
-| **OIDC** | Protocolo de autenticación para publicación |
+### 6.1. Normal change (bugfix, feature, docs)
+
+1. Create branch from ``main``
+2. Work on the branch
+3. Push → CI runs
+4. Open PR → CI runs on the PR
+5. Review and merge
+6. CI runs on ``main`` (post-merge)
+7. Deploy Docs runs automatically
+
+### 6.2. Update documentation
+
+1. Make changes in ``docs/``
+2. Push to ``main``
+3. Deploy Docs runs automatically
+4. Verify at https://alexmarco.github.io/ddlglot/
+
+### 6.3. Make a release
+
+1. Ensure all desired changes are on ``main``
+2. Options to trigger Release Please:
+   a. Run manually: ``gh workflow run release-please.yml``
+   b. Push to ``main`` (runs automatically)
+3. Release Please creates a PR with changelog and version
+4. Review the PR
+5. Merge the PR → tag + GitHub Release + PyPI publish
+
+---
+
+## 7. GitHub Pages Configuration
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Setting
+     - Value
+   * - URL
+     - https://alexmarco.github.io/ddlglot/
+   * - Source
+     - Generated automatically by GitHub
+   * - Build tool
+     - Sphinx
+   * - Theme
+     - sphinx_book_theme
+   * - Version
+     - Read dynamically from ``pyproject.toml``
+
+---
+
+## 8. Trusted Publisher (PyPI)
+
+The project uses PyPI Trusted Publisher, which means:
+
+- No PyPI API token in secrets is needed
+- Publishing uses OIDC (OpenID Connect)
+- Only the Release Please workflow can publish
+- The environment is named ``pypi``
+
+---
+
+## 9. Permissions and Security
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 15 15 20 30
+
+   * - Workflow
+     - contents
+     - pages
+     - pull-requests
+     - id-token
+   * - CI
+     - read
+     - -
+     - -
+     - -
+   * - Docs
+     - read
+     - write
+     - -
+     - write
+   * - Release
+     - write
+     - -
+     - write
+     - write
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Permission
+     - Meaning
+   * - **contents**
+     - Read/edit repo content
+   * - **pages**
+     - Deploy to GitHub Pages
+   * - **pull-requests**
+     - Create/edit PRs
+   * - **id-token**
+     - OIDC authentication for PyPI
+
+---
+
+## 10. FAQ
+
+**Can I run a workflow manually?**
+
+Yes, all workflows have ``workflow_dispatch``. You can run them from the "Actions" tab on GitHub.
+
+**What happens if CI fails?**
+
+The commit/PR is marked as failed (red). Merge is blocked until all checks pass.
+
+**How long does CI take?**
+
+Approximately 1-2 minutes.
+
+**Can I push directly to main?**
+
+Technically yes (because you are the owner), but **you should not**. Always create a PR.
+
+**When does PyPI publish happen?**
+
+Only when the Release PR created by Release Please is merged.
+
+**What is the "Release PR"?**
+
+It is a special PR created by Release Please that contains:
+
+- Changelog of changes since the last version
+- Automatically calculated new version
+- Label ``autorelease: pending``
+
+**Does Release Please publish automatically?**
+
+No. It only creates the PR. You decide when to merge.
+
+---
+
+## 11. Glossary
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Term
+     - Meaning
+   * - **Pipeline**
+     - Automated flow of tasks in GitHub Actions
+   * - **Job**
+     - Set of steps that run on one machine
+   * - **Step**
+     - Individual task (e.g., "Run tests")
+   * - **Artifact**
+     - Generated files that can be downloaded
+   * - **Workflow**
+     - YAML file that defines a pipeline
+   * - **Trusted Publisher**
+     - PyPI authentication without tokens
+   * - **Conventional Commits**
+     - Commit message format (feat:, fix:, etc.)
+   * - **Release PR**
+     - Special PR created by Release Please
+   * - **Semantic Versioning**
+     - Versioning as major.minor.patch
+   * - **OIDC**
+     - Authentication protocol for publishing
+   * - **Kroki**
+     - Diagram rendering service (kroki.io)

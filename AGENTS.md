@@ -411,11 +411,15 @@ gh workflow run release-please.yml
 - **No release triggered**: Merging regular PRs to main
 - **Release triggered**: Merging the Release PR
 
-### Close Old Release PRs
+### Close Unexpected Release PRs
 
-If a Release PR was created automatically before the manual workflow change,
-close it without merging:
+If Release Please creates a Release PR unexpectedly (e.g., before you are
+ready to release), close it without merging:
 
 .. code-block:: bash
 
-    gh pr close 4
+    # List open Release PRs
+    gh pr list --state open --search "release" --json number,title
+
+    # Close it without merging
+    gh pr close <number> --comment "Closing - will trigger again when ready"
