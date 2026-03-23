@@ -26,6 +26,12 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
+html_theme_options = {
+    "logo": {
+        "image_light": "_static/logo-light.png",
+        "image_dark": "_static/logo-dark.png",
+    },
+}
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
