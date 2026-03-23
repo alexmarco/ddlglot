@@ -1,4 +1,4 @@
-![ddlglot logo](./image/Designer (3).png)
+![ddlglot logo](./image/logo.png)
 
 # ddlglot
 
