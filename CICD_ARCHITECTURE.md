@@ -16,10 +16,10 @@ The ddlglot project has **3 pipelines** (workflows) that run independently:
 
 ```mermaid
 flowchart LR
-    A["**Push to main**"] --> B["**CI Pipeline**"]
-    A --> C["**Deploy Docs**"]
-    A -.->|"workflow_dispatch"| D["**Release Please**"]
-    B --> E["✓ PR merged + Tests pass"]
+    A["Push to main"] --> B["CI Pipeline"]
+    A --> C["Deploy Docs"]
+    A -.->|"workflow_dispatch"| D["Release Please"]
+    B --> E["PR merged + Tests pass"]
     C --> F["GitHub Pages"]
     D --> G["Release PR"]
     G --> H["Merge"] --> I["PyPI"]
@@ -45,7 +45,7 @@ The CI pipeline has **2 jobs** that run sequentially:
 
 ```mermaid
 flowchart TB
-    subgraph TEST["**JOB 1: TEST**"]
+    subgraph TEST["JOB 1: TEST"]
         direction TB
         A1["Checkout source code"] --> A2["Install Python 3.13"]
         A2 --> A3["Install uv"]
@@ -56,18 +56,18 @@ flowchart TB
         A7 --> A8["Mypy"]
         A8 --> A9["Pytest (151 tests)"]
         A9 --> A10["Codecov"]
-        A10 -.->|"FAIL"| STOP["Pipeline stops\nCommit marked FAILED"]
+        A10 -.->|"FAIL"| STOP["Pipeline stops<br/>Commit marked FAILED"]
     end
 
     TEST -.->|"pass"| BUILD
 
-    subgraph BUILD["**JOB 2: BUILD**"]
+    subgraph BUILD["JOB 2: BUILD"]
         direction TB
         B1["Checkout source code"] --> B2["Install Python 3.13"]
         B2 --> B3["Install build tools"]
         B3 --> B4["Build .whl + .tar.gz"]
         B4 --> B5["Verify import"]
-        B5 --> B6["Upload artifacts\n(available 5 days)"]
+        B5 --> B6["Upload artifacts<br/>(available 5 days)"]
     end
 ```
 
@@ -102,22 +102,22 @@ This pipeline builds the Sphinx documentation and publishes it to GitHub Pages.
 
 ```mermaid
 flowchart TB
-    subgraph BUILD["**JOB 1: BUILD**"]
+    subgraph BUILD["JOB 1: BUILD"]
         direction TB
         A1["Checkout code"] --> A2["Install Python 3.13"]
         A2 --> A3["Install uv"]
-        A3 --> A4["Install docs deps:\nsphinx, sphinx-autoapi,\nsphinxcontrib-kroki"]
-        A4 --> A5["Build HTML with Sphinx\n(kroki renders diagrams)"]
-        A5 --> A6["Upload as artifact\nfor GitHub Pages"]
+        A3 --> A4["Install docs deps:<br/>sphinx, sphinx-autoapi,<br/>sphinxcontrib-kroki"]
+        A4 --> A5["Build HTML with Sphinx<br/>(kroki renders diagrams)"]
+        A5 --> A6["Upload as artifact<br/>for GitHub Pages"]
     end
 
     BUILD --> DEPLOY
 
-    subgraph DEPLOY["**JOB 2: DEPLOY**"]
+    subgraph DEPLOY["JOB 2: DEPLOY"]
         D1["Deploy to GitHub Pages"]
     end
 
-    DEPLOY -.->|"URL"| URL["https://alexmarco.github.io/ddlglot/"]
+    DEPLOY -.->|"URL"| URL["alexmarco.github.io/ddlglot/"]
 ```
 
 ### 3.3. Features
@@ -144,23 +144,23 @@ This pipeline manages semantic versions and publishes the package to PyPI.
 
 ```mermaid
 flowchart TB
-    subgraph RP["**JOB 1: RELEASE-PLEASE**"]
+    subgraph RP["JOB 1: RELEASE-PLEASE"]
         direction TB
         A1["Checkout code"] --> A2["Run Release Please"]
         A2 --> A3["Analyze commits since last version"]
-        A3 --> A4["Determine change type\n(major/minor/patch)"]
-        A4 --> A5["Create or update\nRelease PR"]
-        A5 --> OUTPUTS["**Outputs**\nreleases_created: true/false\nversion: \"0.3.0\"\nsha: commit-hash"]
+        A3 --> A4["Determine change type<br/>(major/minor/patch)"]
+        A4 --> A5["Create or update<br/>Release PR"]
+        A5 --> OUTPUTS["Outputs:<br/>releases_created: true/false<br/>version: 0.3.0<br/>sha: commit-hash"]
     end
 
     RP -.->|"releases_created = true"| PUB
 
-    subgraph PUB["**JOB 2: PUBLISH**"]
+    subgraph PUB["JOB 2: PUBLISH"]
         direction TB
         B1["Checkout at tag commit"] --> B2["Install Python 3.13"]
         B2 --> B3["Install uv"]
         B3 --> B4["Build package"]
-        B4 --> B5["Publish to PyPI\n(Trusted Publisher)"]
+        B4 --> B5["Publish to PyPI<br/>(Trusted Publisher)"]
     end
 ```
 
@@ -172,14 +172,14 @@ Release Please automates semantic versioning based on commit messages.
 
 ```mermaid
 flowchart LR
-    A["**1.** Developer makes a\nConventional Commit:\n\"feat(builder): add DDL inspection\""] --> B["**2.** Push to main\n(via regular PR merge)"]
-    B --> C["**3.** Run Release Please:\ngh workflow run release-please.yml"]
-    C --> D["**4.** Release Please detects\n\"feat:\" (new feature)"]
-    D --> E["**5.** Creates Release PR:\n\"chore: release 0.3.0\"\n- Changelog\n- Calculated version"]
-    E --> F["**6.** CI runs automatically\non the Release PR"]
-    F --> G["**7.** Review and merge PR"]
-    G --> H["**8.** GitHub creates\ntag (v0.3.0) +\nGitHub Release"]
-    H --> I["**9.** PUBLISH job\npublishes to PyPI"]
+    A["1. Developer makes a<br/>Conventional Commit:<br/>feat(builder): add DDL inspection"] --> B["2. Push to main<br/>(via regular PR merge)"]
+    B --> C["3. Run Release Please:<br/>gh workflow run release-please.yml"]
+    C --> D["4. Release Please detects<br/>feat: (new feature)"]
+    D --> E["5. Creates Release PR:<br/>chore: release 0.3.0<br/>- Changelog<br/>- Calculated version"]
+    E --> F["6. CI runs automatically<br/>on the Release PR"]
+    F --> G["7. Review and merge PR"]
+    G --> H["8. GitHub creates<br/>tag (v0.3.0) +<br/>GitHub Release"]
+    H --> I["9. PUBLISH job<br/>publishes to PyPI"]
 ```
 
 **Change types based on Conventional Commits**:
@@ -242,9 +242,9 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    A["All changes on main"] --> B["gh workflow run\nrelease-please.yml"]
-    B --> C["Release PR created\nwith changelog + version"]
-    C --> D["CI runs automatically\non Release PR"]
+    A["All changes on main"] --> B["gh workflow run<br/>release-please.yml"]
+    B --> C["Release PR created<br/>with changelog + version"]
+    C --> D["CI runs automatically<br/>on Release PR"]
     D --> E["Review PR"]
     E --> F["Merge PR"] --> G["Tag + Release + PyPI"]
 ```
