@@ -9,17 +9,31 @@ from ddlglot.exceptions import (
     SchemaValidationError,
     ValidationError,
 )
-from ddlglot.types import DDL, ColumnDef
+from ddlglot.indexer import IndexBuilder, create_index
+from ddlglot.types import (
+    DDL,
+    CheckDef,
+    ColumnDef,
+    ForeignKeyDef,
+    IndexDef,
+    UniqueDef,
+)
 
 __all__ = [
     "DDL",
     "ASTBuildError",
+    "CheckDef",
     "ColumnDef",
     "CreateBuilder",
     "DDLGlotError",
+    "ForeignKeyDef",
+    "IndexBuilder",
+    "IndexDef",
     "SchemaValidationError",
+    "UniqueDef",
     "ValidationError",
     "create",
+    "create_index",
 ]
 
 

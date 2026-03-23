@@ -50,8 +50,14 @@ Methods are classified into two categories:
      - Universal
      - Add table-level PRIMARY KEY
    * - ``.unique_key()``
-     - Universal
-     - Add table-level UNIQUE constraint
+      - Universal
+      - Add table-level UNIQUE constraint (supports optional name)
+   * - ``.foreign_key()``
+      - Universal
+      - Add table-level FOREIGN KEY constraint
+   * - ``.check()``
+      - Universal
+      - Add table-level CHECK constraint
    * - ``.if_not_exists()``
      - Universal
      - Add IF NOT EXISTS clause
@@ -154,6 +160,75 @@ Add a table-level UNIQUE constraint.
 
     .unique_key("email")
     .unique_key("phone", "country_code")   # Composite unique
+
+.. rubric:: Parameters
+
+- ``*cols`` (str): Column names for the unique constraint
+- ``name`` (str, optional): Constraint name
+
+.. code-block:: python
+
+    .unique_key("email", name="uq_users_email")  # Named constraint
+
+foreign_key()
+^^^^^^^^^^^^^
+
+Add a table-level FOREIGN KEY constraint.
+
+.. code-block:: python
+
+    .foreign_key("user_id", references=("users", ("id",)))
+    .foreign_key(
+        "order_id", "product_id",
+        references=("order_products", ("id", "product_id"))
+    )
+
+.. rubric:: Parameters
+
+- ``*cols`` (str): Column names on the local table
+- ``references`` (tuple): Tuple of ``(referenced_table, (col1, col2, ...))``
+- ``on_delete`` (str, optional): ON DELETE action (``"CASCADE"``, ``"SET NULL"``, etc.)
+- ``on_update`` (str, optional): ON UPDATE action
+- ``name`` (str, optional): Constraint name
+
+.. code-block:: python
+
+    .foreign_key(
+        "user_id",
+        references=("users", ("id",)),
+        on_delete="CASCADE",
+        name="fk_orders_user"
+    )
+
+.. note::
+
+    On Spark/Delta tables, foreign key constraints are not natively supported
+    by the database engine and are not emitted in the output.
+
+check()
+^^^^^^^
+
+Add a table-level CHECK constraint.
+
+.. code-block:: python
+
+    .check("price > 0")
+    .check("salary > 0 AND salary < 1000000")
+
+.. rubric:: Parameters
+
+- ``condition`` (str): SQL condition expression
+- ``name`` (str, optional): Constraint name
+
+.. code-block:: python
+
+    .check("price > 0", name="chk_positive_price")
+
+.. note::
+
+    On Spark/Delta tables (created with ``.using("delta")``), CHECK constraints
+    are stored as ``delta.constraints.{name}`` TBLPROPERTIES instead of SQL
+    constraints, since Spark does not support SQL CHECK constraints natively.
 
 if_not_exists()
 ^^^^^^^^^^^^^^^
@@ -391,7 +466,9 @@ DDL object also exposes:
 - ``if_not_exists``: Whether IF NOT EXISTS was set
 - ``temporary``: Whether TEMPORARY was set
 - ``comment``: Table comment
-- ``unique_keys``: Tuple of unique constraint column tuples
+- ``unique_keys``: Tuple of ``UniqueDef`` objects
+- ``foreign_keys``: Tuple of ``ForeignKeyDef`` objects
+- ``checks``: Tuple of ``CheckDef`` objects
 
 .. code-block:: python
 
@@ -400,11 +477,11 @@ DDL object also exposes:
         .name("users")
         .column("id", "INT")
         .column("email", "VARCHAR(100)")
-        .unique_key("email")
+        .unique_key("email", name="uq_users_email")
         .build()
     )
 
-    ddl.unique_keys  # → (("email",),)
+    ddl.unique_keys  # → (UniqueDef(columns=('email',), name='uq_users_email'),)
 
 
 Builder Inspection Properties
@@ -452,6 +529,147 @@ The ``ColumnDef`` NamedTuple represents a column definition:
    * - ``default``
      - Default value (Any)
 
+
+UniqueDef
+^^^^^^^^^
+
+The ``UniqueDef`` dataclass represents a unique constraint definition:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Attribute
+     - Description
+   * - ``columns``
+     - Tuple of column names (tuple[str, ...])
+   * - ``name``
+     - Constraint name, or None if unnamed (str | None)
+
+
+ForeignKeyDef
+^^^^^^^^^^^^^
+
+The ``ForeignKeyDef`` dataclass represents a foreign key constraint definition:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Attribute
+     - Description
+   * - ``columns``
+     - Local column names (tuple[str, ...])
+   * - ``referenced_table``
+     - Referenced table name (str)
+   * - ``referenced_columns``
+     - Referenced column names (tuple[str, ...])
+   * - ``on_delete``
+     - ON DELETE action, or None (str | None)
+   * - ``on_update``
+     - ON UPDATE action, or None (str | None)
+   * - ``constraint_name``
+     - Constraint name, or None if unnamed (str | None)
+
+
+CheckDef
+^^^^^^^^
+
+The ``CheckDef`` dataclass represents a CHECK constraint definition:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Attribute
+     - Description
+   * - ``condition``
+     - SQL condition expression (str)
+   * - ``name``
+     - Constraint name, or None if unnamed (str | None)
+
+
+IndexBuilder and create_index()
+-------------------------------
+
+The ``IndexBuilder`` class provides a fluent API for generating standalone
+``CREATE INDEX`` statements. Use ``create_index()`` to create a new builder.
+
+.. code-block:: python
+
+    from ddlglot import create_index
+
+    sql = (
+        create_index("idx_users_email")
+        .on("users", "email")
+        .unique()
+        .sql(dialect="postgres")
+    )
+    # Output: CREATE INDEX UNIQUE idx_users_email ON users(email)
+
+Method Reference
+~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Method
+     - Description
+   * - ``.on(<table>, <cols>)``
+     - Set table and column names (required)
+   * - ``.unique()``
+     - Mark as UNIQUE index
+   * - ``.using(<type>)``
+     - Set USING type (e.g., "btree", "hash")
+   * - ``.where(<condition>)``
+     - Add WHERE clause (partial index)
+   * - ``.include(<col>)``
+     - Add INCLUDE column (covering index)
+   * - ``.comment(<text>)``
+     - Add index comment
+   * - ``.sql()``
+     - Generate SQL string
+   * - ``.to_ast()``
+     - Return SQLGlot ``exp.Create`` AST
+   * - ``.build()``
+     - Return ``IndexDef`` for inspection
+
+IndexDef
+^^^^^^^^
+
+The ``IndexDef`` dataclass represents an index definition:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Attribute
+     - Description
+   * - ``name``
+     - Index name (str)
+   * - ``table``
+     - Table name, or None (str | None)
+   * - ``columns``
+     - Column names (tuple[str, ...])
+   * - ``unique``
+     - Whether UNIQUE (bool)
+   * - ``using``
+     - USING type, or None (str | None)
+   * - ``where``
+     - WHERE condition, or None (str | None)
+   * - ``include``
+     - INCLUDE columns (tuple[str, ...])
+   * - ``comment``
+     - Comment text, or None (str | None)
+
+``IndexDef`` has a ``.build()`` method that returns an ``IndexBuilder``,
+enabling round-trip inspection and modification:
+
+.. code-block:: python
+
+    index_def = create_index("idx").on("users", "email").build()
+    rebuilt = index_def.build()  # Returns IndexBuilder
 
 Supported Dialects
 ------------------

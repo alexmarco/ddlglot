@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Union
 from sqlglot import expressions as exp
 
 from .exceptions import ASTBuildError
-from .types import DDL, ColumnDef
+from .types import DDL, CheckDef, ColumnDef, ForeignKeyDef, UniqueDef
 
 if TYPE_CHECKING:
     pass
@@ -36,6 +36,16 @@ class CreateBuilder:
         self._partition_cols: list[exp.Expression] = []
         self._location: str | None = None
         self._tblprops: dict[str, Lit] = {}
+        self._foreign_keys: list[
+            tuple[
+                tuple[str, ...],  # local columns
+                tuple[str, tuple[str, ...]],  # (ref_table, ref_cols)
+                str | None,  # on_delete
+                str | None,  # on_update
+                str | None,  # constraint name
+            ]
+        ] = []
+        self._checks: list[tuple[str | None, str]] = []  # (name, condition_str)
 
     def name(self, table: str) -> CreateBuilder:
         """Set the table/view name."""
@@ -101,13 +111,78 @@ class CreateBuilder:
         )
         return self
 
-    def unique_key(self, *cols: str) -> CreateBuilder:
-        """Add UNIQUE constraint."""
-        self._table_constraints.append(
-            exp.UniqueColumnConstraint(
-                this=exp.Schema(expressions=[exp.to_identifier(c) for c in cols])
+    def unique_key(self, *cols: str, name: str | None = None) -> CreateBuilder:
+        """Add UNIQUE constraint.
+
+        Args:
+            *cols: Column names for the unique constraint.
+            name: Optional constraint name.
+        """
+        schema = exp.Schema(expressions=[exp.to_identifier(c) for c in cols])
+        if name:
+            self._table_constraints.append(
+                exp.Constraint(
+                    this=exp.to_identifier(name),
+                    expressions=[exp.UniqueColumnConstraint(this=schema)],
+                )
             )
+        else:
+            self._table_constraints.append(exp.UniqueColumnConstraint(this=schema))
+        return self
+
+    def foreign_key(
+        self,
+        *cols: str,
+        references: tuple[str, tuple[str, ...]],
+        on_delete: str | None = None,
+        on_update: str | None = None,
+        name: str | None = None,
+    ) -> CreateBuilder:
+        """Add a FOREIGN KEY constraint.
+
+        Args:
+            *cols: Column names on the local table.
+            references: Tuple of (referenced_table, (col1, col2, ...)).
+            on_delete: ON DELETE action (e.g., "CASCADE", "SET NULL").
+            on_update: ON UPDATE action.
+            name: Optional constraint name.
+        """
+        ref_table, ref_cols = references
+        fk = exp.ForeignKey(
+            expressions=[exp.to_identifier(c) for c in cols],
+            reference=exp.Reference(
+                this=exp.Schema(
+                    this=exp.to_table(ref_table),
+                    expressions=[exp.to_identifier(c) for c in ref_cols],
+                )
+            ),
+            delete=on_delete,
+            update=on_update,
         )
+        if name:
+            self._table_constraints.append(
+                exp.Constraint(
+                    this=exp.to_identifier(name),
+                    expressions=[fk],
+                )
+            )
+        else:
+            self._table_constraints.append(fk)
+        self._foreign_keys.append((cols, references, on_delete, on_update, name))
+        return self
+
+    def check(
+        self,
+        condition: str,
+        name: str | None = None,
+    ) -> CreateBuilder:
+        """Add a CHECK constraint.
+
+        Args:
+            condition: SQL condition expression (e.g., "price > 0").
+            name: Optional constraint name.
+        """
+        self._checks.append((name, condition))
         return self
 
     def as_select(self, select_expr: exp.Expression) -> CreateBuilder:
@@ -172,6 +247,16 @@ class CreateBuilder:
                     )
                 )
 
+        if self._checks and self._using and self._using.upper() in ("DELTA", "DELTA LAKE"):
+            for check_name, condition_str in self._checks:
+                prop_name = f"delta.constraints.{check_name or 'check'}"
+                exprs.append(
+                    exp.Property(
+                        this=exp.to_identifier(prop_name),
+                        value=exp.Literal.string(condition_str),
+                    )
+                )
+
         if self._comment:
             exprs.append(exp.SchemaCommentProperty(this=exp.Literal.string(self._comment)))
 
@@ -195,7 +280,24 @@ class CreateBuilder:
                 exists=self._if_not_exists,
             )
 
-        schema = exp.Schema(this=table, expressions=[*self._columns, *self._table_constraints])
+        constraints = list(self._table_constraints)
+        if self._checks and not (self._using and self._using.upper() in ("DELTA", "DELTA LAKE")):
+            from sqlglot import parse_one
+
+            for check_name, condition_str in self._checks:
+                parsed_condition = parse_one(condition_str)
+                check_constraint = exp.CheckColumnConstraint(this=parsed_condition)
+                if check_name:
+                    constraints.append(
+                        exp.Constraint(
+                            this=exp.to_identifier(check_name),
+                            expressions=[check_constraint],
+                        )
+                    )
+                else:
+                    constraints.append(check_constraint)
+
+        schema = exp.Schema(this=table, expressions=[*self._columns, *constraints])
         return exp.Create(
             kind=self.kind,
             this=schema,
@@ -254,6 +356,8 @@ class CreateBuilder:
             comment=self._comment,
             if_not_exists=self._if_not_exists,
             temporary=bool(self._temporary),
+            foreign_keys=self._build_foreign_keys(),
+            checks=self._build_checks(),
             _ast=ast,
         )
 
@@ -323,18 +427,45 @@ class CreateBuilder:
                 return tuple(c.name for c in constraint.expressions)
         return ()
 
-    def _build_unique_keys(self) -> tuple[tuple[str, ...], ...]:
-        """Build tuple of unique constraint column tuples."""
-        result: list[tuple[str, ...]] = []
+    def _build_unique_keys(self) -> tuple[UniqueDef, ...]:
+        """Build tuple of UniqueDef objects."""
+        result: list[UniqueDef] = []
         for constraint in self._table_constraints:
-            if isinstance(constraint, exp.UniqueColumnConstraint):
-                if constraint.this and constraint.this.expressions:
-                    result.append(tuple(c.name for c in constraint.this.expressions))
-                else:
-                    result.append(())
-        if result:
-            return tuple(result)
-        return ()
+            if isinstance(constraint, exp.Constraint):
+                for expr in constraint.expressions:
+                    if isinstance(expr, exp.UniqueColumnConstraint):
+                        cols = tuple(c.name for c in (expr.this.expressions if expr.this else []))
+                        result.append(
+                            UniqueDef(
+                                columns=cols, name=constraint.this.name if constraint.this else None
+                            )
+                        )
+            elif isinstance(constraint, exp.UniqueColumnConstraint):
+                cols = tuple(
+                    c.name for c in (constraint.this.expressions if constraint.this else [])
+                )
+                result.append(UniqueDef(columns=cols))
+        return tuple(result) if result else ()
+
+    def _build_foreign_keys(self) -> tuple[ForeignKeyDef, ...]:
+        """Build tuple of ForeignKeyDef objects."""
+        return tuple(
+            ForeignKeyDef(
+                columns=cols,
+                referenced_table=ref_table,
+                referenced_columns=ref_cols,
+                on_delete=on_delete,
+                on_update=on_update,
+                constraint_name=fk_name,
+            )
+            for cols, (ref_table, ref_cols), on_delete, on_update, fk_name in self._foreign_keys
+        )
+
+    def _build_checks(self) -> tuple[CheckDef, ...]:
+        """Build tuple of CheckDef objects."""
+        return tuple(
+            CheckDef(name=check_name, condition=condition) for check_name, condition in self._checks
+        )
 
     @property
     def table_name(self) -> str | None:
@@ -352,8 +483,8 @@ class CreateBuilder:
         return self._build_primary_keys()
 
     @property
-    def unique_keys(self) -> tuple[tuple[str, ...], ...]:
-        """Return unique constraint column tuples."""
+    def unique_keys(self) -> tuple[UniqueDef, ...]:
+        """Return unique constraint definitions."""
         return self._build_unique_keys()
 
     @property
@@ -363,3 +494,13 @@ class CreateBuilder:
             col.name if isinstance(col, exp.Identifier) else str(col)
             for col in self._partition_cols
         )
+
+    @property
+    def foreign_keys(self) -> tuple[ForeignKeyDef, ...]:
+        """Return foreign key definitions."""
+        return self._build_foreign_keys()
+
+    @property
+    def checks(self) -> tuple[CheckDef, ...]:
+        """Return CHECK constraint definitions."""
+        return self._build_checks()
