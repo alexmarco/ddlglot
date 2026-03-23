@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0](https://github.com/alexmarco/ddlglot/compare/v0.3.0...v1.0.0) (2026-03-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* **core:** unique_keys inspection now returns tuple[UniqueDef, ...] instead of tuple[tuple[str, ...], ...
+
+### Features
+
+* **core:** add foreign_key(), check() constraints and IndexBuilder ([#16](https://github.com/alexmarco/ddlglot/issues/16)) ([161ca65](https://github.com/alexmarco/ddlglot/commit/161ca653872de0516eff98977f10db0bb2705f1b))
+* **docs:** add dual-mode logo for Sphinx documentation ([a6cc2f3](https://github.com/alexmarco/ddlglot/commit/a6cc2f3e3d87fd5a87de70dbb791251742cc6e33))
+* **docs:** add logo title and custom fonts to Sphinx theme ([bd72ea7](https://github.com/alexmarco/ddlglot/commit/bd72ea73d5bf42e5bbd14623e42eefc606d48124))
+* **docs:** add sphinx-copybutton for code block copy buttons ([e6363c5](https://github.com/alexmarco/ddlglot/commit/e6363c57517d462c2db8f459928f9d8b4f4f5f14))
+* **docs:** increase logo size to 128px ([12675c6](https://github.com/alexmarco/ddlglot/commit/12675c64a717dc9755d62b1e686560211f3922a2))
+* **docs:** show version badge in navbar using standard template approach ([87c3378](https://github.com/alexmarco/ddlglot/commit/87c33784e921d21b6a0c2b6cd4c8d852529e6e59))
+* **docs:** show version below logo using logo.text option ([fb8d7dc](https://github.com/alexmarco/ddlglot/commit/fb8d7dc643bb1b5d9f7bea1c53951b76cba6f153))
+* **docs:** unify logo to Designer (3) across docs and README ([b91c053](https://github.com/alexmarco/ddlglot/commit/b91c053b6d13898dfc43c282587ba1adba1c42b8))
+
+
+### Bug Fixes
+
+* **docs:** correct Mermaid syntax for GitHub rendering ([048cd2e](https://github.com/alexmarco/ddlglot/commit/048cd2e0cd20ee037855be96f4eb5ac999af306c))
+* **readme:** update logo reference to renamed image ([66721e9](https://github.com/alexmarco/ddlglot/commit/66721e94baf7a7125fd68f6496fa527eb29c3412))
+
+
+### Documentation
+
+* add Mermaid diagrams to CICD_ARCHITECTURE.md ([be81f11](https://github.com/alexmarco/ddlglot/commit/be81f11406131942a8c04b952c2ea1e62a05ca04))
+* rewrite README to reflect current API ([215f2e2](https://github.com/alexmarco/ddlglot/commit/215f2e2d014581b315265a82ad0a45075cbe1de9))
+
 ## [0.3.0](https://github.com/alexmarco/ddlglot/compare/v0.2.0...v0.3.0) (2026-03-23)
 
 
