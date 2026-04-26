@@ -356,77 +356,166 @@ cd docs/_build/html && python -m http.server 8080
 
 .. warning::
 
-   **NEVER push directly to main.** All changes must go through pull requests.
+   **NEVER push directly to main or develop.** All changes must go through pull requests.
    Even as repository owner, use feature branches to maintain a clean history
    and ensure CI validation.
 
-- Use Conventional Commits: `feat(scope): description`, `fix(scope): description`
-- Run `pytest` and `ruff check .` before committing
-- Create a feature branch for each task:
+### Branch Model (Simplified GitFlow)
 
-  .. code-block:: bash
+| Branch | Purpose | Merge via |
+|---------|---------|-----------|
+| `main` | Production-ready code | PR only (from Release PR or hotfix) |
+| `develop` | Integration branch for next release | PR only (from feature/*, fix/*, docs/*) |
 
-      # Create and switch to new branch
-      git checkout -b feat/docs-add-autoapi
+### Working Branches
 
-      # Work on the branch, make commits
-      git add . && git commit -m "feat(docs): add sphinx-autoapi"
+| Pattern | Base branch | Merges into | Purpose |
+|---------|-------------|-------------|---------|
+| `feature/<issue>-<slug>` | `develop` | `develop` | New features |
+| `fix/<issue>-<slug>` | `develop` | `develop` | Bug fixes |
+| `docs/<issue>-<slug>` | `develop` | `develop` | Documentation |
+| `hotfix/<version>-<slug>` | `main` | `main` + `develop` | Urgent production fixes |
 
-      # Push and create PR
-      git push -u origin feat/docs-add-autoapi
-      gh pr create --title "feat(docs): add sphinx-autoapi" --body "..."
+### Rules
 
-- After PR is merged, switch back to main and pull:
+1. **Conventional Commits required** - validated by pre-commit hook
+2. **PR required** for `main` and `develop`
+3. **Merge method**: Only Merge Commits (no squash, no rebase)
+4. **One task = One PR** - closes the related issue
 
-  .. code-block:: bash
+### Commit Types and Version Impact
 
-      git checkout main
-      git pull
+| Type | When to use | SemVer impact |
+|------|-------------|---------------|
+| `feat` | New feature | MINOR bump |
+| `fix` | Bug fix | PATCH bump |
+| `docs` | Documentation | None |
+| `chore` | Maintenance | None |
+| `refactor` | Code restructure | None |
+| `feat!` / `BREAKING CHANGE` | Breaking change | MAJOR bump |
+
+### Workflow Example
+
+.. code-block:: bash
+
+   # 1. Create issue #42 "Add new feature"
+
+   # 2. Switch to develop and create feature branch
+   git checkout develop
+   git pull origin develop
+   git checkout -b feature/42-add-search
+
+   # 3. Work on the branch, make commits
+   git add . && git commit -m "feat: add search functionality (#42)"
+
+   # 4. Push and create PR to develop
+   git push -u origin feature/42-add-search
+   gh pr create --base develop --title "feat: add search (#42)" --body "Closes #42"
+
+   # 5. After merge to develop, accumulate features...
+
+   # 6. When ready: PR develop → main
+   gh pr create --base main --head develop --title "chore: release v0.4.0" --body "..."
+
+   # 7. After merge to main, Release Please creates Release PR automatically
+
+   # 8. Merge Release PR → Tag + PyPI publish + Docs deploy
+
+### Hotfix Process
+
+.. code-block:: bash
+
+   # For critical bugs in production
+   git checkout main
+   git pull origin main
+   git checkout -b hotfix/0.3.1-fix-critical
+
+   # Make fix and commit
+   git commit -m "fix: resolve critical issue"
+
+   # PR to main
+   gh pr create --base main --title "fix: critical hotfix" --body "..."
+
+   # After merge: tag created automatically or manually
+   git tag v0.3.1
+   git push origin v0.3.1
+
+   # Back-merge to develop
+   git checkout develop
+   git merge main
+   git push origin develop
 
 ---
 
 ## 9. Release Process
 
-Release Please is **manual-only** (no automatic runs on push). This gives you
-full control over when to release.
+Release Please is **automatic** - it calculates version based on conventional commits.
 
-### Trigger Release
+### Version Calculation
 
-.. code-block:: bash
+Release Please automatically determines the next version:
 
-    # Option 1: GitHub CLI
-    gh workflow run release-please.yml
-
-    # Option 2: Web UI
-    # Go to: Actions → Release Please → Run workflow
+| Conventional Commit | Version Bump | Example |
+|-------------------|--------------|---------|
+| `feat:` | MINOR | 0.3.0 → 0.4.0 |
+| `fix:` | PATCH | 0.3.0 → 0.3.1 |
+| `feat!:` / `BREAKING CHANGE:` | MAJOR | 0.3.0 → 1.0.0 |
 
 ### Release Workflow
 
-1. Run the workflow manually (see above)
-2. Release Please creates/updates a Release PR with all changes since
-   the last release
-3. CI runs automatically on the Release PR (no manual CI trigger needed)
-4. Review the changelog in the Release PR
-5. Merge the Release PR → tag + GitHub Release + PyPI publish
+1. Accumulate changes in `develop` via PRs (feature/*, fix/*, docs/*)
+2. When ready: Create PR from `develop` → `main`
+3. After merging to `main`:
+   - Release Please creates/updates a Release PR with CHANGELOG.md
+   - The Release PR shows all changes since last release
+4. Review the Release PR changelog
+5. Merge the Release PR → automatic tag + GitHub Release + PyPI publish
+6. Docs deploy automatically via `.github/workflows/docs.yml`
 
-**When does CI run?**
+### Release Please Configuration
 
-- On every PR (including the Release PR) — no branch filters
-- On every push to ``main`` or ``develop``
-- On manual trigger
+The `.release-please-config.json` is configured without `"release-as"` to allow
+automatic version calculation:
 
-**No release triggered**: Merging regular PRs to main
-**Release triggered**: Merging the Release PR
+.. code-block:: json
 
-### Close Unexpected Release PRs
+   {
+     "packages": {
+       ".": {
+         "package-name": "ddlglot",
+         "release-type": "python"
+       }
+     }
+   }
 
-If Release Please creates a Release PR unexpectedly (e.g., before you are
-ready to release), close it without merging:
+### After Release
+
+- Tag is created automatically (e.g., `v0.4.0`)
+- GitHub Release is created with CHANGELOG content
+- Package is published to PyPI via trusted publishing (OIDC)
+- Documentation is deployed to GitHub Pages
+
+### Hotfix Releases
+
+For critical production bugs:
 
 .. code-block:: bash
 
-    # List open Release PRs
-    gh pr list --state open --search "release" --json number,title
+   # 1. Create hotfix from main
+   git checkout main
+   git checkout -b hotfix/0.3.1-fix-critical
 
-    # Close it without merging
-    gh pr close <number> --comment "Closing - will trigger again when ready"
+   # 2. Make fix and commit
+   git commit -m "fix: resolve critical issue"
+
+   # 3. PR to main
+   gh pr create --base main --title "fix: critical hotfix" --body "..."
+
+   # 4. After merge: tag and push
+   git tag v0.3.1
+   git push origin v0.3.1
+
+   # 5. Back-merge to develop
+   git checkout develop
+   git merge main
+   git push origin develop
