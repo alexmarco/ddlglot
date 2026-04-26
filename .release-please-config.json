@@ -3,8 +3,7 @@
   "packages": {
     ".": {
       "package-name": "ddlglot",
-      "release-type": "python",
-      "release-as": "0.4.0"
+      "release-type": "python"
     }
   }
 }

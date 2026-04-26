@@ -5,12 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0](https://github.com/alexmarco/ddlglot/compare/v0.3.0...v1.0.0) (2026-03-23)
+## [Unreleased](https://github.com/alexmarco/ddlglot/compare/v0.3.0...HEAD)
 
 
-### ⚠ BREAKING CHANGES
+### ⚠️ BREAKING CHANGES
 
 * **core:** unique_keys inspection now returns tuple[UniqueDef, ...] instead of tuple[tuple[str, ...], ...
+
 
 ### Features
 
@@ -89,64 +90,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * update AGENTS.md to reflect current project state ([ddd9d64](https://github.com/alexmarco/ddlglot/commit/ddd9d6417d2ee4612dc7a17813c2caf38f9ee6a0))
 
 ## 0.1.0 (2026-03-21)
-
-
-### Features
-
-* initial commit with ddlglot v0.1.0 ([2d1eeff](https://github.com/alexmarco/ddlglot/commit/2d1eeffe16ffcbaf31bb1df5783ed40038a18b5b))
-
-
-### Bug Fixes
-
-* **ci:** use sha for publish checkout instead of tag ([605a168](https://github.com/alexmarco/ddlglot/commit/605a168f83ecfcaa944d9026ff58eef6f3efc3f3))
-
-## [26.4.0](https://github.com/alexmarco/ddlglot/compare/v26.3.2...v26.4.0) (2026-03-21)
-
-
-### Features
-
-* **ci:** add release-please and commitlint for automated versioning ([5fb6b81](https://github.com/alexmarco/ddlglot/commit/5fb6b8136da4cc9898783f3db3cfbbf8a8dbdf11))
-* **ci:** add release-please and commitlint for automated versioning ([b8f3db1](https://github.com/alexmarco/ddlglot/commit/b8f3db16c430d7b9c3684a82adcf89d8e3739b31))
-
-
-### Bug Fixes
-
-* **docs:** remove tag trigger to avoid environment protection rules ([cb26ded](https://github.com/alexmarco/ddlglot/commit/cb26dedc10ac526b361403b86444770b2c62ae73))
-
-## [26.3.2] - 2026-03-21
-
-### Added
-
-- `.sql()` now accepts `indent`, `pad`, and `max_text_width` parameters for fine-grained pretty printing control
-
-## [26.3.1] - 2026-03-21
-
-### Fixed
-
-- CREATE TABLE now produces correct SQL without spurious `AS` clause
-
-## [26.3.0] - 2026-03-20
-
-### Added
-
-- Core builder with fluent API for DDL generation
-- Support for multiple SQL dialects:
-  - Spark+Delta Lake with CDF support
-  - Apache Hive with SERDE/ROW FORMAT
-  - PostgreSQL
-  - DuckDB
-  - BigQuery
-- Plugin registry system for custom variants
-- Dialect-specific validation
-- Comprehensive test suite (92 tests)
-- GitHub Actions CI/CD
-- Sphinx documentation
-- Pre-commit hooks
-
-### Features
-
-- `create()` factory function for generic DDL
-- `create_spark_delta()`, `create_hive()`, etc. for dialect-specific DDL
-- Fluent method chaining for all DDL operations
-- Type hints and validation
-- SQLGlot-powered AST generation
